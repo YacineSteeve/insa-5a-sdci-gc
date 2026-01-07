@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.blyweertboukari.sdci</groupId>
-    <artifactId>com.blyweertboukari.sdci.gc</artifactId>
+    <artifactId>gc</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>sdci-general-controller</name>
     <description>MAPE-K General Controller for the SDCI project</description>
@@ -15,17 +15,14 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>1.4.200</version>
         </dependency>
         <dependency>
             <groupId>de.vandermeer</groupId>
             <artifactId>asciitable</artifactId>
-            <version>0.3.2</version>
         </dependency>
         <dependency>
             <groupId>com.github.signaflo</groupId>
             <artifactId>timeseries</artifactId>
-            <version>0.4</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -35,7 +32,6 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.5</version>
         </dependency>
     </dependencies>
     <build>
