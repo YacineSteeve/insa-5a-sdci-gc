@@ -6,11 +6,11 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
-@SuppressWarnings({"SameParameterValue", "SynchronizeOnNonFinalField"})
+@SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Execute {
     private static Execute instance;
-
     private static final Logger logger = LogManager.getLogger(Execute.class);
+    private static List<String> workflow_lists;
 
     public static Execute getInstance() {
         if (instance == null) {
@@ -19,8 +19,6 @@ public class Execute {
         return instance;
     }
 
-    private static List<String> workflow_lists;
-
     public void start() throws InterruptedException {
         logger.info("Start Execution");
         workflow_lists = Knowledge.getInstance().get_worklow_lists();
@@ -28,7 +26,6 @@ public class Execute {
         while (Main.run.get()) {
             String current_plan = get_plan();
 
-            // logger("Received Plan : " + current_plan);
             String[] workflow = workflow_generator(current_plan);
             for (int i = 0; i < workflow.length; i++) {
                 logger.info("workflow [{}] : {}", i, workflow[i]);
@@ -39,7 +36,6 @@ public class Execute {
                 logger.info("UC : {}", w);
                 Thread.sleep(2000);
             }
-
         }
     }
 
@@ -65,6 +61,6 @@ public class Execute {
         } else if (plan.contentEquals(plans.get(2))) {
             return workflow_lists.get(2).split("/");
         } else
-            return null;
+            return new String[0];
     }
 }

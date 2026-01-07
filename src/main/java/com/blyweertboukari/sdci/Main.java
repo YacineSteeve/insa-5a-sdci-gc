@@ -16,6 +16,8 @@ public class Main {
     public static AtomicBoolean run = new AtomicBoolean(true);
 
     public static void main(String[] args) throws Exception {
+        logger.info("Starting...");
+
         Knowledge.getInstance().start();
 
         Thread.sleep(3000);
@@ -27,7 +29,6 @@ public class Main {
                 logger.error("Monitoring error: ", e);
             }
         });
-
 
         Thread thread_a = new Thread(() -> {
             try {

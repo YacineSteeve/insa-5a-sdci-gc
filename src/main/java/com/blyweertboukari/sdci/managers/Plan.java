@@ -9,8 +9,9 @@ import java.util.List;
 @SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Plan {
     private static Plan instance;
-
     private static final Logger logger = LogManager.getLogger(Plan.class);
+    private static int i;
+    public String gw_PLAN = "";
 
     public static Plan getInstance() {
         if (instance == null) {
@@ -19,15 +20,11 @@ public class Plan {
         return instance;
     }
 
-    private static int i;
-    public String gw_PLAN = "";
-
     public void start() {
         logger.info("Start Planning");
 
-        while (true) {
+        while (Main.run.get()) {
             String current_rfc = get_rfc();
-            //logger.info("Received RFC : " + current_rfc);
             update_plan(plan_generator(current_rfc));
 
         }
@@ -45,16 +42,14 @@ public class Plan {
         return Analyze.getInstance().gw_current_RFC;
     }
 
-
     //Rule-based Plan Generator
     private String plan_generator(String rfc) {
         List<String> rfcs = Knowledge.getInstance().get_rfc();
         List<String> plans = Knowledge.getInstance().get_plans();
 
         if ("YourPlansDoNotWork".contentEquals(rfc)) {
-            // Thread.sleep(2000);
             Main.run.set(false);
-            logger.info("All the Plans were executed without success. \n \t\t The loop will stop!");
+            logger.info("All the Plans were executed without success. The loop will stop!");
             // Terminate JVM
             System.exit(0);
         } else if (rfc.contentEquals(rfcs.get(0))) {
@@ -74,7 +69,6 @@ public class Plan {
         }
         return null;
     }
-
 
     private void update_plan(String plan) {
         synchronized (gw_PLAN) {

@@ -6,11 +6,12 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
-@SuppressWarnings({"SameParameterValue", "SynchronizeOnNonFinalField"})
+@SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Analyze {
     private static Analyze instance;
-
     private static final Logger logger = LogManager.getLogger(Analyze.class);
+    private static int i;
+    public String gw_current_RFC = "";
 
     public static Analyze getInstance() {
         if (instance == null) {
@@ -19,16 +20,12 @@ public class Analyze {
         return instance;
     }
 
-    public String gw_current_RFC = "";
-    private static int i;
-
     public void start() {
         logger.info("Start Analyzing");
 
         while (Main.run.get()) {
 
             String current_symptom = get_symptom();
-            //logger("Received Symptom : " + current_symptom);
 
             update_rfc(rfc_generator(current_symptom));
         }
@@ -68,7 +65,6 @@ public class Analyze {
             return null;
 
     }
-
 
     private void update_rfc(String rfc) {
 

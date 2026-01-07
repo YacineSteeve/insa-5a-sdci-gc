@@ -14,13 +14,18 @@ import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.List;
 
 @SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Monitor {
     private static Monitor instance;
-
     private static final Logger logger = LogManager.getLogger(Monitor.class);
+    private static final int period = 2000;
+    private static List<String> symptom;
+    private static double i = 0;
+    public String gw_current_SYMP = "N/A";
 
     public static Monitor getInstance() {
         if (instance == null) {
@@ -29,26 +34,20 @@ public class Monitor {
         return instance;
     }
 
-    private static List<String> symptom;
-    private static final int period = 2000;
-    private static double i = 0;
-    public String gw_current_SYMP = "N/A";
-
     public void start() {
         logger.info("Start monitoring of " + Knowledge.gw);
         symptom = Knowledge.getInstance().get_symptoms();
         Knowledge.getInstance().create_lat_tab();
-        data_collector(); //in bg
+        data_collector();
         symptom_generator();
     }
 
-    //Symptom Generator  (can be modified)
+    //Symptom Generator (can be modified)
     private void symptom_generator() {
         while (Main.run.get())
             try {
                 Thread.sleep(period * 5);
                 ResultSet rs = Knowledge.getInstance().select_from_tab();
-                //print_nice_rs(rs);
                 double[] prediction = predict_next_lat(rs);
                 boolean isOk = true;
                 for (int j = 0; j < Knowledge.horizon; j++) {
@@ -81,7 +80,7 @@ public class Monitor {
                 try {
                     //TODO: Remove this
                     Thread.sleep(period);
-                    Knowledge.getInstance().insert_in_tab(new java.sql.Timestamp(new java.util.Date().getTime()), get_fake_data());
+                    Knowledge.getInstance().insert_in_tab(new Timestamp(new Date().getTime()), get_fake_data());
                 } catch (InterruptedException e) {
                     logger.error("Data collector error: ", e);
                 }
@@ -98,7 +97,6 @@ public class Monitor {
     }
 
     private double get_fake_data() {
-        //return new Random().nextInt();
         return i += 2.5;
     }
 
@@ -114,15 +112,15 @@ public class Monitor {
         }
         TimeSeries timeSeries = TimeSeries.from(DoubleFunctions.arrayFrom(history));
         ArimaOrder modelOrder = ArimaOrder.order(0, 1, 1, 0, 1, 1);
-        //ArimaOrder modelOrder = ArimaOrder.order(0, 0, 0, 1, 1, 1);
         Arima model = Arima.model(timeSeries, modelOrder);
         Forecast forecast = model.forecast(Knowledge.moving_wind);
-        System.out.print("Point Estimates : ");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Point Estimates : ");
         for (int k = 0; k < Knowledge.horizon; k++) {
             p[k] = forecast.pointEstimates().at(k);
-            System.out.print(p[k] + "; ");
+            sb.append(p[k]).append("; ");
         }
-        System.out.println();
+        logger.trace(sb.toString());
         return p;
     }
 
@@ -149,7 +147,5 @@ public class Monitor {
 
         }
     }
-
-
 }
 

@@ -19,3 +19,5 @@ buildNumber.properties
 .vscode
 .DS_Store
 .env*
+*.mv.db
+*.trace.db
