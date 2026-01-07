@@ -5,54 +5,51 @@ import com.blyweertboukari.sdci.managers.Execute;
 import com.blyweertboukari.sdci.managers.Monitor;
 import com.blyweertboukari.sdci.managers.Plan;
 import com.blyweertboukari.sdci.managers.Knowledge;
-import org.apache.logging.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.util.logging.LogManager;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Main {
-    private static final Logger LOGGER = LogManager.getLogger(Main.class);
+    private static final Logger logger = LogManager.getLogger(Main.class);
 
-    static final Monitor monitor = new Monitor();
-    static final Analyze analyze = new Analyze();
-    static final Plan plan = new Plan();
-    private static final Execute execute = new Execute();
-    static final Knowledge shared_knowledge = new Knowledge();
+    public static AtomicBoolean run = new AtomicBoolean(true);
 
     public static void main(String[] args) throws Exception {
-        shared_knowledge.start();
+        Knowledge.getInstance().start();
+
         Thread.sleep(3000);
 
         Thread thread_m = new Thread(() -> {
             try {
-                monitor.start();
+                Monitor.getInstance().start();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Monitoring error: ", e);
             }
         });
 
 
         Thread thread_a = new Thread(() -> {
             try {
-                analyze.start();
+                Analyze.getInstance().start();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Analysis error: ", e);
             }
         });
 
         Thread thread_p = new Thread(() -> {
             try {
-                plan.start();
+                Plan.getInstance().start();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Planning error: ", e);
             }
         });
 
         Thread thread_e = new Thread(() -> {
             try {
-                execute.start();
+                Execute.getInstance().start();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Execution error: ", e);
             }
         });
 

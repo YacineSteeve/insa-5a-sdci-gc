@@ -1,27 +1,42 @@
 package com.blyweertboukari.sdci.managers;
 
+import com.blyweertboukari.sdci.Main;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.List;
 
 @SuppressWarnings({"SameParameterValue", "SynchronizeOnNonFinalField"})
 public class Execute {
+    private static Execute instance;
+
+    private static final Logger logger = LogManager.getLogger(Execute.class);
+
+    public static Execute getInstance() {
+        if (instance == null) {
+            instance = new Execute();
+        }
+        return instance;
+    }
+
     private static List<String> workflow_lists;
 
-    void start() throws InterruptedException {
-        Main.logger(this.getClass().getSimpleName(), "Start Execution");
-        workflow_lists = Main.shared_knowledge.get_worklow_lists();
+    public void start() throws InterruptedException {
+        logger.info("Start Execution");
+        workflow_lists = Knowledge.getInstance().get_worklow_lists();
 
-        while (Main.run) {
+        while (Main.run.get()) {
             String current_plan = get_plan();
 
-            // Main.logger(this.getClass().getSimpleName(), "Received Plan : " + current_plan);
+            // logger("Received Plan : " + current_plan);
             String[] workflow = workflow_generator(current_plan);
             for (int i = 0; i < workflow.length; i++) {
-                Main.logger(this.getClass().getSimpleName(), "workflow [" + i + "] : " + workflow[i]);
+                logger.info("workflow [{}] : {}", i, workflow[i]);
 
             }
 
             for (String w : workflow) {
-                Main.logger(this.getClass().getSimpleName(), "UC : " + w);
+                logger.info("UC : {}", w);
                 Thread.sleep(2000);
             }
 
@@ -30,19 +45,19 @@ public class Execute {
 
     //Plan Receiver
     private String get_plan() {
-        synchronized (Main.plan.gw_PLAN) {
+        synchronized (Plan.getInstance().gw_PLAN) {
             try {
-                Main.plan.gw_PLAN.wait();
+                Plan.getInstance().gw_PLAN.wait();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.error("Error in getting Plan: ", e);
             }
         }
-        return Main.plan.gw_PLAN;
+        return Plan.getInstance().gw_PLAN;
     }
 
     //Rule-based Workflow Generator
     private String[] workflow_generator(String plan) {
-        List<String> plans = Main.shared_knowledge.get_plans();
+        List<String> plans = Knowledge.getInstance().get_plans();
         if (plan.contentEquals(plans.get(0))) {
             return workflow_lists.get(0).split("/");
         } else if (plan.contentEquals(plans.get(1))) {

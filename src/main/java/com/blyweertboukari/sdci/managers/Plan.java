@@ -1,18 +1,33 @@
 package com.blyweertboukari.sdci.managers;
 
+import com.blyweertboukari.sdci.Main;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.List;
 
 @SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Plan {
+    private static Plan instance;
+
+    private static final Logger logger = LogManager.getLogger(Plan.class);
+
+    public static Plan getInstance() {
+        if (instance == null) {
+            instance = new Plan();
+        }
+        return instance;
+    }
+
     private static int i;
     public String gw_PLAN = "";
 
-    void start() {
-        Main.logger(this.getClass().getSimpleName(), "Start Planning");
+    public void start() {
+        logger.info("Start Planning");
 
-        while (Main.run) {
+        while (true) {
             String current_rfc = get_rfc();
-            //Main.logger(this.getClass().getSimpleName(), "Received RFC : " + current_rfc);
+            //logger.info("Received RFC : " + current_rfc);
             update_plan(plan_generator(current_rfc));
 
         }
@@ -20,39 +35,39 @@ public class Plan {
 
     //RFC Receiver
     private String get_rfc() {
-        synchronized (Main.analyze.gw_current_RFC) {
+        synchronized (Analyze.getInstance().gw_current_RFC) {
             try {
-                Main.analyze.gw_current_RFC.wait();
+                Analyze.getInstance().gw_current_RFC.wait();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.error("Error in getting RFC: ", e);
             }
         }
-        return Main.analyze.gw_current_RFC;
+        return Analyze.getInstance().gw_current_RFC;
     }
 
 
     //Rule-based Plan Generator
     private String plan_generator(String rfc) {
-        List<String> rfcs = Main.shared_knowledge.get_rfc();
-        List<String> plans = Main.shared_knowledge.get_plans();
+        List<String> rfcs = Knowledge.getInstance().get_rfc();
+        List<String> plans = Knowledge.getInstance().get_plans();
 
         if ("YourPlansDoNotWork".contentEquals(rfc)) {
             // Thread.sleep(2000);
-            Main.run = false;
-            Main.logger(this.getClass().getSimpleName(), "All the Plans were executed without success. \n \t\t The loop will stop!");
+            Main.run.set(false);
+            logger.info("All the Plans were executed without success. \n \t\t The loop will stop!");
             // Terminate JVM
             System.exit(0);
         } else if (rfc.contentEquals(rfcs.get(0))) {
-            Main.logger(this.getClass().getSimpleName(), "Plan --> To Execute : " + plans.get(0));
+            logger.info("Plan --> To Execute : {}", plans.get(0));
             i = 0;
             return plans.get(0);
         } else if (rfc.contentEquals(rfcs.get(1))) {
             if (i == 0) {
-                Main.logger(this.getClass().getSimpleName(), "Plan --> To Execute : " + plans.get(1));
+                logger.info("Plan --> To Execute : {}", plans.get(1));
                 i++;
                 return plans.get(1);
             } else if (i == 1) {
-                Main.logger(this.getClass().getSimpleName(), "Plan --> To Execute : " + plans.get(2));
+                logger.info("Plan --> To Execute : {}", plans.get(2));
                 i++;
                 return plans.get(2);
             }

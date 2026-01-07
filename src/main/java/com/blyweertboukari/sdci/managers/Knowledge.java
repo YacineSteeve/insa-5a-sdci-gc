@@ -1,11 +1,25 @@
 package com.blyweertboukari.sdci.managers;
 
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.DeleteDbFiles;
 
 import java.sql.*;
 import java.util.*;
 
 public class Knowledge {
+    private static Knowledge instance;
+
+    private static final Logger logger = LogManager.getLogger(Knowledge.class);
+
+    public static Knowledge getInstance() {
+        if (instance == null) {
+            instance = new Knowledge();
+        }
+        return instance;
+    }
+
     private static final String DB_DRIVER = "org.h2.Driver";
     private static final String DB_CONNECTION = "jdbc:h2:~/test";
     private static final String DB_USER = "";
@@ -30,10 +44,10 @@ public class Knowledge {
     private List<String> newgwsip;
     private final String importantsrcip = "192.168.0.1";
 
-    void start() throws Exception {
+    public void start() throws Exception {
         // delete the H2 database named 'test' in the user home directory
         DeleteDbFiles.execute("~", "test", true);
-        Main.logger(this.getClass().getSimpleName(), "old database 'test' deleted");
+        logger.info("old database 'test' deleted");
         //Initialization of the Knowledge
         store_symptoms();
         store_rfcs();
@@ -48,8 +62,7 @@ public class Knowledge {
         gwsinfo.add(1, gwinfo);
         gwsinfo.add(2, gwinfo);
 
-        Main.logger(this.getClass().getSimpleName(), "Knowledge Starting");
-
+        logger.info("Knowledge Starting");
     }
 
     void insert_in_tab(Timestamp timestamp, double lat) {
@@ -64,9 +77,9 @@ public class Knowledge {
             insert.close();
             conn.commit();
         } catch (SQLException e) {
-            System.out.println("Exception Message " + e.getLocalizedMessage());
+            logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Insert in table error: ", e);
         }
     }
 
@@ -85,9 +98,9 @@ public class Knowledge {
                 r.add(rs.getString("symptom"));
             }
         } catch (SQLException e) {
-            System.out.println("Exception Message " + e.getLocalizedMessage());
+            logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Get symptoms error: ", e);
         }
         return r;
 
@@ -108,9 +121,9 @@ public class Knowledge {
                 r.add(rs.getString("rfc"));
             }
         } catch (SQLException e) {
-            System.out.println("Exception Message " + e.getLocalizedMessage());
+            logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Get RFC error: ", e);
         }
 
         return r;
@@ -132,9 +145,9 @@ public class Knowledge {
                 r.add(rs.getString("plan"));
             }
         } catch (SQLException e) {
-            System.out.println("Exception Message " + e.getLocalizedMessage());
+            logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Get plans error: ", e);
         }
 
         return r;
@@ -156,9 +169,9 @@ public class Knowledge {
                 r.add(rs.getString("workflow"));
             }
         } catch (SQLException e) {
-            System.out.println("Exception Message " + e.getLocalizedMessage());
+            logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Get workflow lists error: ", e);
         }
 
         return r;
@@ -166,7 +179,7 @@ public class Knowledge {
     }
 
     ResultSet select_from_tab() {
-        //Main.logger("Select the last " + n + " latencies");
+        //logger("Select the last " + n + " latencies");
         Connection conn = getDBConnection();
         String SelectQuery = "select TOP " + moving_wind + " * from " + Knowledge.gw + "_LAT" + " ORDER BY id DESC";
         //PreparedStatement select;
@@ -176,9 +189,9 @@ public class Knowledge {
             // select = conn.prepareStatement(SelectQuery);
             rs = stmt.executeQuery(SelectQuery);
         } catch (SQLException e) {
-            System.out.println("Exception Message " + e.getLocalizedMessage());
+            logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Select from table error: ", e);
         }
         return rs;
 
@@ -194,12 +207,11 @@ public class Knowledge {
             create.close();
             conn.commit();
         } catch (SQLException e) {
-            System.out.println("Exception Message " + e.getLocalizedMessage());
+            logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Create latency table error: ", e);
         } finally {
-            Main.logger(this.getClass().getSimpleName(), "... Database Created");
-
+            logger.info("... Database Created");
         }
     }
 
@@ -223,9 +235,9 @@ public class Knowledge {
                 insert.close();
                 conn.commit();
             } catch (SQLException e) {
-                System.out.println("Exception Message " + e.getLocalizedMessage());
+                logger.error("Failed to execute query: ", e);
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Store plans error: ", e);
             } finally {
                 conn.close();
             }
@@ -252,9 +264,9 @@ public class Knowledge {
                 insert.close();
                 conn.commit();
             } catch (SQLException e) {
-                System.out.println("Exception Message " + e.getLocalizedMessage());
+                logger.error("Failed to execute query: ", e);
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Store RFCs error: ", e);
             } finally {
                 conn.close();
             }
@@ -281,9 +293,9 @@ public class Knowledge {
                 insert.close();
                 conn.commit();
             } catch (SQLException e) {
-                System.out.println("Exception Message " + e.getLocalizedMessage());
+                logger.error("Failed to execute query: ", e);
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Store execution workflow error: ", e);
             } finally {
                 conn.close();
             }
@@ -311,9 +323,9 @@ public class Knowledge {
                 insert.close();
                 conn.commit();
             } catch (SQLException e) {
-                System.out.println("Exception Message " + e.getLocalizedMessage());
+                logger.error("Failed to execute query: ", e);
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Store symptoms error: ", e);
             } finally {
                 conn.close();
             }
@@ -321,16 +333,16 @@ public class Knowledge {
     }
 
     private Connection getDBConnection() {
-        // Main.logger("Connecting the database ...");
+        // logger("Connecting the database ...");
         try {
             Class.forName(DB_DRIVER);
         } catch (ClassNotFoundException e) {
-            System.out.println(e.getMessage());
+            logger.error("Database Driver not found: ", e);
         }
         try {
             return DriverManager.getConnection(DB_CONNECTION, DB_USER, DB_PASSWORD);
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            logger.error("Connection Failed: ", e);
             return null;
         }
 

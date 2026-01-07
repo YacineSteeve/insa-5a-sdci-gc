@@ -1,19 +1,34 @@
 package com.blyweertboukari.sdci.managers;
 
+import com.blyweertboukari.sdci.Main;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.List;
 
 @SuppressWarnings({"SameParameterValue", "SynchronizeOnNonFinalField"})
 public class Analyze {
+    private static Analyze instance;
+
+    private static final Logger logger = LogManager.getLogger(Analyze.class);
+
+    public static Analyze getInstance() {
+        if (instance == null) {
+            instance = new Analyze();
+        }
+        return instance;
+    }
+
     public String gw_current_RFC = "";
     private static int i;
 
-    void start() {
-        Main.logger(this.getClass().getSimpleName(), "Start Analyzing");
+    public void start() {
+        logger.info("Start Analyzing");
 
-        while (Main.run) {
+        while (Main.run.get()) {
 
             String current_symptom = get_symptom();
-            //Main.logger(this.getClass().getSimpleName(), "Received Symptom : " + current_symptom);
+            //logger("Received Symptom : " + current_symptom);
 
             update_rfc(rfc_generator(current_symptom));
         }
@@ -21,32 +36,32 @@ public class Analyze {
 
     //Symptom Receiver
     private String get_symptom() {
-        synchronized (Main.monitor.gw_current_SYMP) {
+        synchronized (Monitor.getInstance().gw_current_SYMP) {
             try {
-                Main.monitor.gw_current_SYMP.wait();
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
+                Monitor.getInstance().gw_current_SYMP.wait();
+            } catch (InterruptedException e) {
+                logger.error("Error in getting Symptom: ", e);
             }
         }
-        return Main.monitor.gw_current_SYMP;
+        return Monitor.getInstance().gw_current_SYMP;
     }
 
     //Rule-based RFC Generator
     private String rfc_generator(String symptom) {
-        List<String> symptoms = Main.shared_knowledge.get_symptoms();
-        List<String> rfcs = Main.shared_knowledge.get_rfc();
+        List<String> symptoms = Knowledge.getInstance().get_symptoms();
+        List<String> rfcs = Knowledge.getInstance().get_rfc();
 
         if (symptom.contentEquals(symptoms.get(0)) || symptom.contentEquals(symptoms.get(2))) {
-            Main.logger(this.getClass().getSimpleName(), "RFC --> To plan : " + rfcs.get(0));
+            logger.info("RFC --> To plan : {}", rfcs.get(0));
             i = 0;
             return rfcs.get(0);
         } else if (symptom.contentEquals(symptoms.get(1))) {
             i++;
             if (i < 3) {
-                Main.logger(this.getClass().getSimpleName(), "RFC --> To plan : " + rfcs.get(1));
+                logger.info("RFC --> To plan : {}", rfcs.get(1));
                 return rfcs.get(1);
             } else {
-                Main.logger(this.getClass().getSimpleName(), "RFC --> To plan : " + "YourPlansDoNotWork");
+                logger.info("RFC --> To plan : YourPlansDoNotWork");
                 return "YourPlansDoNotWork";
             }
         } else
