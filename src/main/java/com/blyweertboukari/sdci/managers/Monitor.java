@@ -1,6 +1,8 @@
 package com.blyweertboukari.sdci.managers;
 
 import com.blyweertboukari.sdci.Main;
+import com.blyweertboukari.sdci.utils.Metric;
+import com.blyweertboukari.sdci.utils.MetricsReader;
 import com.github.signaflo.math.operations.DoubleFunctions;
 import com.github.signaflo.timeseries.TimeSeries;
 import com.github.signaflo.timeseries.forecast.Forecast;
@@ -12,6 +14,7 @@ import de.vandermeer.asciithemes.a7.A7_Grids;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -24,7 +27,6 @@ public class Monitor {
     private static final Logger logger = LogManager.getLogger(Monitor.class);
     private static final int period = 2000;
     private static List<String> symptom;
-    private static double i = 0;
     public String gw_current_SYMP = "N/A";
 
     public static Monitor getInstance() {
@@ -76,28 +78,21 @@ public class Monitor {
     private void data_collector() {
         new Thread(() -> {
             logger.info("Filling db with latencies");
-            while (Main.run.get())
+            while (Main.run.get()) {
                 try {
-                    //TODO: Remove this
-                    Thread.sleep(period);
-                    Knowledge.getInstance().insert_in_tab(new Timestamp(new Date().getTime()), get_fake_data());
-                } catch (InterruptedException e) {
+                    Knowledge.getInstance().insert_in_tab(new Timestamp(new Date().getTime()), get_data());
+                } catch (InterruptedException | IOException e) {
                     logger.error("Data collector error: ", e);
                 }
-
+            }
         }
 
         ).start();
     }
 
-    private int get_data() {
-        //Call Sensors
-        /*TODO*/
-        return 0;
-    }
-
-    private double get_fake_data() {
-        return i += 2.5;
+    private double get_data() throws IOException, InterruptedException {
+        String metric = MetricsReader.getMetric(Metric.REQUESTS_PER_SECOND);
+        return Double.parseDouble(metric);
     }
 
     //ARIMA-based Forecasting
