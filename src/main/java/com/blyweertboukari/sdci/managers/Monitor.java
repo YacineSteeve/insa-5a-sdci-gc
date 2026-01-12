@@ -3,14 +3,6 @@ package com.blyweertboukari.sdci.managers;
 import com.blyweertboukari.sdci.Main;
 import com.blyweertboukari.sdci.utils.Metric;
 import com.blyweertboukari.sdci.utils.MetricsReader;
-import com.github.signaflo.math.operations.DoubleFunctions;
-import com.github.signaflo.timeseries.TimeSeries;
-import com.github.signaflo.timeseries.forecast.Forecast;
-import com.github.signaflo.timeseries.model.arima.Arima;
-import com.github.signaflo.timeseries.model.arima.ArimaOrder;
-import de.vandermeer.asciitable.AsciiTable;
-import de.vandermeer.asciitable.CWC_LongestWord;
-import de.vandermeer.asciithemes.a7.A7_Grids;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,7 +42,7 @@ public class Monitor {
             try {
                 Thread.sleep(period * 5);
                 ResultSet rs = Knowledge.getInstance().select_from_tab();
-                double[] prediction = predict_next_lat(rs);
+                double[] prediction = analyse_metrics(rs);
                 boolean isOk = true;
                 for (int j = 0; j < Knowledge.horizon; j++) {
                     if (prediction[j] > Knowledge.gw_lat_threshold) {
@@ -74,10 +66,10 @@ public class Monitor {
             }
     }
 
-    //Data Collector TODO : modify
+    //Data Collector
     private void data_collector() {
         new Thread(() -> {
-            logger.info("Filling db with latencies");
+            logger.info("Reading metrics...");
             while (Main.run.get()) {
                 try {
                     Knowledge.getInstance().insert_in_tab(new Timestamp(new Date().getTime()), get_data());
@@ -95,43 +87,10 @@ public class Monitor {
         return Double.parseDouble(metric);
     }
 
-    //ARIMA-based Forecasting
-    private double[] predict_next_lat(ResultSet rs) throws SQLException {
+    //TODO : implementer fonction anaylse thresholds...
+    private double[] analyse_metrics(ResultSet rs) throws SQLException {
         rs.first();
-        double[] history = new double[Knowledge.moving_wind];
-        double[] p = new double[Knowledge.horizon];
-        int j = Knowledge.moving_wind - 1;
-        while (rs.next()) {
-            history[j] = Double.parseDouble(rs.getString("latency"));
-            j--;
-        }
-        TimeSeries timeSeries = TimeSeries.from(DoubleFunctions.arrayFrom(history));
-        ArimaOrder modelOrder = ArimaOrder.order(0, 1, 1, 0, 1, 1);
-        Arima model = Arima.model(timeSeries, modelOrder);
-        Forecast forecast = model.forecast(Knowledge.moving_wind);
-        StringBuilder sb = new StringBuilder();
-        sb.append("Point Estimates : ");
-        for (int k = 0; k < Knowledge.horizon; k++) {
-            p[k] = forecast.pointEstimates().at(k);
-            sb.append(p[k]).append("; ");
-        }
-        logger.trace(sb.toString());
-        return p;
-    }
-
-    private void print_nice_rs(ResultSet rs) throws SQLException {
-        rs.first();
-        AsciiTable at = new AsciiTable();
-        at.addRule();
-        at.addRow("Timestamp", "Latency_in_" + Knowledge.gw);
-        at.addRule();
-        while (rs.next()) {
-            at.addRow(rs.getTimestamp("id").getTime(), rs.getString("latency"));
-            at.addRule();
-        }
-        at.getContext().setGrid(A7_Grids.minusBarPlusEquals());
-        at.getRenderer().setCWC(new CWC_LongestWord());
-        logger.info(at.render());
+        return new double[Knowledge.horizon];
     }
 
     private void update_symptom(String symptom) {
