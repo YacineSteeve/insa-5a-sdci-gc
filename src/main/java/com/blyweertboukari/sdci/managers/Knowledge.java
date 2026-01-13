@@ -1,10 +1,11 @@
 package com.blyweertboukari.sdci.managers;
 
+import com.blyweertboukari.sdci.utils.Metric;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.*;
-import java.util.*;
+import java.util.List;
 
 public class Knowledge {
     private static Knowledge instance;
@@ -15,16 +16,60 @@ public class Knowledge {
     private static final String DB_USER = "";
     private static final String DB_PASSWORD = "";
 
-    /*TODO : edit symptom, rfc, workflow_lists, plan*/
-    private static final List<String> symptom = Arrays.asList("N/A", "NOK", "OK");
-    private static final List<String> rfc = Arrays.asList("DoNotDoAnything", "DecreaseLatency");
-    private static final List<String> workflow_lists = Arrays.asList("UC1", "UC2/UC3", "UC4/UC5/UC6");
-    private static final List<String> plan = Arrays.asList("A", "B", "C");
-
-    static final int moving_wind = 10;
+    static final int MOVING_WINDOW_SIZE = 20;
     static final int horizon = 3;
-    static final String gw = "GW_I";
     static final double gw_lat_threshold = 20;
+
+    public enum Symptom {
+        GATEWAY_NA,
+        GATEWAY_NOK,
+        GATEWAY_OK,
+
+        SERVER_NA,
+        SERVER_NOK,
+        SERVER_OK
+    }
+
+    public enum Rfc {
+        GATEWAY_DO_NOTHING,
+        GATEWAY_DECREASE_LATENCY,
+        GATEWAY_DECREASE_RPS,
+
+        SERVER_DO_NOTHING,
+        SERVER_DECREASE_LATENCY,
+        SERVER_DECREASE_RPS
+    }
+
+    public enum Plan {
+        GATEWAY_NO_ACTION,
+        GATEWAY_SCALE_UP_RAM,
+        GATEWAY_SCALE_UP_CPU,
+        GATEWAY_SCALE_DOWN_RAM,
+        GATEWAY_SCALE_DOWN_CPU,
+
+        SERVER_NO_ACTION,
+        SERVER_SCALE_UP_RAM,
+        SERVER_SCALE_DOWN_RAM,
+        SERVER_SCALE_UP_CPU,
+        SERVER_SCALE_DOWN_CPU
+    }
+
+    public enum Workflow {
+        GATEWAY_INCREASE_RAM,
+        GATEWAY_INCREASE_CPU,
+        GATEWAY_DECREASE_RAM,
+        GATEWAY_DECREASE_CPU,
+
+        SERVER_INCREASE_RAM,
+        SERVER_INCREASE_CPU,
+        SERVER_DECREASE_RAM,
+        SERVER_DECREASE_CPU
+    }
+
+    public enum Target {
+        GATEWAY,
+        SERVER
+    }
 
     public static Knowledge getInstance() {
         if (instance == null) {
@@ -33,300 +78,84 @@ public class Knowledge {
         return instance;
     }
 
-    public void start() throws Exception {
-        //Initialization of the Knowledge
-        store_symptoms();
-        store_rfcs();
-        store_plans();
-        store_execution_workflow();
-
+    public void start() {
         logger.info("Knowledge Starting");
+        create_tables();
     }
 
-    void insert_in_tab(Timestamp timestamp, double lat) {
-        try (Connection conn = getDBConnection()) {
-            PreparedStatement insert;
-            String InsertQuery = "INSERT INTO " + gw + "_LAT" + " (id, latency) values" + "(?,?)";
-            conn.setAutoCommit(false);
-            insert = conn.prepareStatement(InsertQuery);
-            insert.setTimestamp(1, timestamp);
-            insert.setDouble(2, lat);
-            insert.executeUpdate();
-            insert.close();
-            conn.commit();
+    public void add_value(Metric metric, Target target, double value) {
+        try (Connection connection = getDatabaseConnection()) {
+            String insertQuery = "INSERT INTO " + metric.tableName + " (id, target, value) VALUES (?, ?, ?)";
+
+            PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
+            preparedStatement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            preparedStatement.setString(2, target.name());
+            preparedStatement.setDouble(3, value);
+
+            preparedStatement.executeUpdate();
+            preparedStatement.close();
         } catch (SQLException e) {
             logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            logger.error("Insert in table error: ", e);
+            logger.error("Failed to add value: ", e);
         }
     }
 
-    List<String> get_symptoms() {
-        String gw_symp = gw + "_SYMP";
+    public List<Double> get_last_values(Metric metric, Target target) {
+        try (Connection connection = getDatabaseConnection()) {
+            String query = "SELECT value FROM " + metric.tableName + " WHERE target = ? ORDER BY id DESC LIMIT ?";
 
-        Connection conn = getDBConnection();
-        String SelectQuery = "select * from " + gw_symp;
-        PreparedStatement select;
-        List<String> r = null;
-        try {
-            select = conn.prepareStatement(SelectQuery);
-            ResultSet rs = select.executeQuery();
-            r = new ArrayList<>();
-            while (rs.next()) {
-                r.add(rs.getString("symptom"));
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setString(1, target.name());
+            preparedStatement.setInt(2, MOVING_WINDOW_SIZE);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            List<Double> values = new java.util.ArrayList<>();
+            while (resultSet.next()) {
+                values.add(resultSet.getDouble("value"));
             }
+            resultSet.close();
+            preparedStatement.close();
+
+            return values;
+        } catch (SQLException e) {
+            logger.error("Failed to execute query: ", e);
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            logger.error("Failed to get last values: ", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void create_tables() {
+        try (Connection connection = getDatabaseConnection()) {
+            connection.setAutoCommit(false);
+
+            for (Metric metric : Metric.values()) {
+                Statement create;
+                create = connection.createStatement();
+                create.execute("CREATE TABLE IF NOT EXISTS " + metric.tableName + " (id TIMESTAMP PRIMARY KEY, target VARCHAR(50), value DOUBLE )");
+                create.close();
+
+                PreparedStatement update = connection.prepareStatement("TRUNCATE TABLE " + metric.tableName);
+                update.executeUpdate();
+                update.close();
+
+                logger.info("Table {} created", metric.tableName);
+            }
+
+            connection.commit();
+
+            logger.info("All tables Created");
         } catch (SQLException e) {
             logger.error("Failed to execute query: ", e);
         } catch (Exception e) {
-            logger.error("Get symptoms error: ", e);
-        }
-        return r;
-
-    }
-
-    List<String> get_rfc() {
-        String gw_rfc = gw + "_RFC";
-
-        Connection conn = getDBConnection();
-        String SelectQuery = "select * from " + gw_rfc;
-        PreparedStatement select;
-        List<String> r = null;
-        try {
-            select = conn.prepareStatement(SelectQuery);
-            ResultSet rs = select.executeQuery();
-            r = new ArrayList<>();
-            while (rs.next()) {
-                r.add(rs.getString("rfc"));
-            }
-        } catch (SQLException e) {
-            logger.error("Failed to execute query: ", e);
-        } catch (Exception e) {
-            logger.error("Get RFC error: ", e);
-        }
-
-        return r;
-
-    }
-
-    List<String> get_plans() {
-        String gw_plan = gw + "_PLAN";
-
-        Connection conn = getDBConnection();
-        String SelectQuery = "select * from " + gw_plan;
-        PreparedStatement select;
-        List<String> r = null;
-        try {
-            select = conn.prepareStatement(SelectQuery);
-            ResultSet rs = select.executeQuery();
-            r = new ArrayList<>();
-            while (rs.next()) {
-                r.add(rs.getString("plan"));
-            }
-        } catch (SQLException e) {
-            logger.error("Failed to execute query: ", e);
-        } catch (Exception e) {
-            logger.error("Get plans error: ", e);
-        }
-
-        return r;
-
-    }
-
-    List<String> get_worklow_lists() {
-        String gw_execw = gw + "_EXECW";
-
-        Connection conn = getDBConnection();
-        String SelectQuery = "select * from " + gw_execw;
-        PreparedStatement select;
-        List<String> r = null;
-        try {
-            select = conn.prepareStatement(SelectQuery);
-            ResultSet rs = select.executeQuery();
-            r = new ArrayList<>();
-            while (rs.next()) {
-                r.add(rs.getString("workflow"));
-            }
-        } catch (SQLException e) {
-            logger.error("Failed to execute query: ", e);
-        } catch (Exception e) {
-            logger.error("Get workflow lists error: ", e);
-        }
-
-        return r;
-
-    }
-
-    ResultSet select_from_tab() {
-        Connection conn = getDBConnection();
-        String SelectQuery = "select TOP " + moving_wind + " * from " + gw + "_LAT" + " ORDER BY id DESC";
-        ResultSet rs = null;
-        try {
-            Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-            rs = stmt.executeQuery(SelectQuery);
-        } catch (SQLException e) {
-            logger.error("Failed to execute query: ", e);
-        } catch (Exception e) {
-            logger.error("Select from table error: ", e);
-        }
-        return rs;
-    }
-
-    void create_lat_tab() {
-        try (Connection conn = getDBConnection()) {
-            Statement create;
-            conn.setAutoCommit(false);
-            create = conn.createStatement();
-            create.execute("CREATE TABLE IF NOT EXISTS " + gw + "_LAT" + " (id timestamp primary key, latency double )");
-            create.close();
-
-            PreparedStatement update = conn.prepareStatement("TRUNCATE TABLE " + gw + "_LAT");
-            update.executeUpdate();
-            update.close();
-
-            conn.commit();
-        } catch (SQLException e) {
-            logger.error("Failed to execute query: ", e);
-        } catch (Exception e) {
-            logger.error("Create latency table error: ", e);
-        } finally {
-            logger.info("Database Created");
+            logger.error("Failed to create tables: ", e);
         }
     }
 
-    private void store_plans() throws SQLException {
-        String gw_plan = gw + "_PLAN";
-        Connection conn = getDBConnection();
-        Statement create;
-        conn.setAutoCommit(false);
-        create = conn.createStatement();
-        create.execute("CREATE TABLE IF NOT EXISTS " + gw_plan + " (id int primary key, plan varchar(20) )");
-        create.close();
-
-        PreparedStatement update = conn.prepareStatement("TRUNCATE TABLE " + gw_plan);
-        update.executeUpdate();
-        update.close();
-
-        for (int i = 0; i < plan.size(); i++) {
-            conn = getDBConnection();
-            PreparedStatement insert;
-            try {
-                insert = conn.prepareStatement("INSERT INTO " + gw_plan + " (id, plan) values" + "(?,?)");
-                insert.setInt(1, i + 1);
-                insert.setString(2, plan.get(i));
-                insert.executeUpdate();
-                insert.close();
-                conn.commit();
-            } catch (SQLException e) {
-                logger.error("Failed to execute query: ", e);
-            } catch (Exception e) {
-                logger.error("Store plans error: ", e);
-            } finally {
-                conn.close();
-            }
-        }
-    }
-
-    private void store_rfcs() throws SQLException {
-        String gw_rfc = gw + "_RFC";
-        Connection conn = getDBConnection();
-        Statement create;
-        conn.setAutoCommit(false);
-        create = conn.createStatement();
-        create.execute("CREATE TABLE IF NOT EXISTS " + gw_rfc + " (id int primary key, rfc varchar(40) )");
-        create.close();
-
-        PreparedStatement update = conn.prepareStatement("TRUNCATE TABLE " + gw_rfc);
-        update.executeUpdate();
-        update.close();
-
-        for (int i = 0; i < rfc.size(); i++) {
-            conn = getDBConnection();
-            PreparedStatement insert;
-            try {
-                insert = conn.prepareStatement("INSERT INTO " + gw_rfc + " (id, rfc) values" + "(?,?)");
-                insert.setInt(1, i + 1);
-                insert.setString(2, rfc.get(i));
-                insert.executeUpdate();
-                insert.close();
-                conn.commit();
-            } catch (SQLException e) {
-                logger.error("Failed to execute query: ", e);
-            } catch (Exception e) {
-                logger.error("Store RFCs error: ", e);
-            } finally {
-                conn.close();
-            }
-        }
-    }
-
-    private void store_execution_workflow() throws SQLException {
-        String gw_execw = gw + "_EXECW";
-        Connection conn = getDBConnection();
-        Statement create;
-        conn.setAutoCommit(false);
-        create = conn.createStatement();
-        create.execute("CREATE TABLE IF NOT EXISTS " + gw_execw + " (id int primary key, workflow varchar(50) )");
-        create.close();
-
-        PreparedStatement update = conn.prepareStatement("TRUNCATE TABLE " + gw_execw);
-        update.executeUpdate();
-        update.close();
-
-        for (int i = 0; i < workflow_lists.size(); i++) {
-            conn = getDBConnection();
-            PreparedStatement insert;
-            try {
-                insert = conn.prepareStatement("INSERT INTO " + gw_execw + " (id, workflow) values" + "(?,?)");
-                insert.setInt(1, i + 1);
-                insert.setString(2, workflow_lists.get(i));
-                insert.executeUpdate();
-                insert.close();
-                conn.commit();
-            } catch (SQLException e) {
-                logger.error("Failed to execute query: ", e);
-            } catch (Exception e) {
-                logger.error("Store execution workflow error: ", e);
-            } finally {
-                conn.close();
-            }
-        }
-    }
-
-    private void store_symptoms() throws SQLException {
-        String gw_symp = gw + "_SYMP";
-        Connection conn = getDBConnection();
-        Statement create;
-        conn.setAutoCommit(false);
-        create = conn.createStatement();
-        create.execute("CREATE TABLE IF NOT EXISTS " + gw_symp + " (id int primary key, symptom varchar(5) )");
-        create.close();
-
-        PreparedStatement update = conn.prepareStatement("TRUNCATE TABLE " + gw_symp);
-        update.executeUpdate();
-        update.close();
-
-        for (int i = 0; i < symptom.size(); i++) {
-            conn = getDBConnection();
-            PreparedStatement insert;
-
-            try {
-                insert = conn.prepareStatement("INSERT INTO " + gw_symp + " (id, symptom) values" + "(?,?)");
-                insert.setInt(1, i + 1);
-                insert.setString(2, symptom.get(i));
-                insert.executeUpdate();
-                insert.close();
-                conn.commit();
-            } catch (SQLException e) {
-                logger.error("Failed to execute query: ", e);
-            } catch (Exception e) {
-                logger.error("Store symptoms error: ", e);
-            } finally {
-                conn.close();
-            }
-        }
-    }
-
-    private Connection getDBConnection() {
+    private Connection getDatabaseConnection() {
         try {
             Class.forName(DB_DRIVER);
         } catch (ClassNotFoundException e) {

@@ -29,9 +29,8 @@ public class Monitor {
     }
 
     public void start() {
-        logger.info("Start monitoring of " + Knowledge.gw);
+        logger.info("Start monitoring");
         symptom = Knowledge.getInstance().get_symptoms();
-        Knowledge.getInstance().create_lat_tab();
         data_collector();
         symptom_generator();
     }
