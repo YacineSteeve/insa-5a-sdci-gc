@@ -11,7 +11,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Monitor {
@@ -19,7 +21,10 @@ public class Monitor {
     private static final Logger logger = LogManager.getLogger(Monitor.class);
     private static final int period = 2000;
     private static List<String> symptom;
-    public String gw_current_SYMP = "N/A";
+    public static Map<Knowledge.Target, Knowledge.Symptom> currenSymptom = Map.ofEntries(
+            Map.entry(Knowledge.Target.GATEWAY, Knowledge.Symptom.GATEWAY_NA),
+            Map.entry(Knowledge.Target.SERVER, Knowledge.Symptom.SERVER_NA)
+    );
 
     public static Monitor getInstance() {
         if (instance == null) {
@@ -30,7 +35,7 @@ public class Monitor {
 
     public void start() {
         logger.info("Start monitoring");
-        symptom = Knowledge.getInstance().get_symptoms();
+        gatewaySymptom = Knowledge.Symptom.;
         data_collector();
         symptom_generator();
     }

@@ -5,13 +5,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.List;
+import java.util.Map;
 
 @SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Analyze {
     private static Analyze instance;
     private static final Logger logger = LogManager.getLogger(Analyze.class);
     private static int i;
-    public String gw_current_RFC = "";
+    public static Map<Knowledge.Target, Knowledge.Rfc> currentRfc = Map.ofEntries(
+            Map.entry(Knowledge.Target.GATEWAY, Knowledge.Rfc.GATEWAY_DO_NOTHING),
+            Map.entry(Knowledge.Target.SERVER, Knowledge.Rfc.SERVER_DO_NOTHING)
+    );
 
     public static Analyze getInstance() {
         if (instance == null) {
