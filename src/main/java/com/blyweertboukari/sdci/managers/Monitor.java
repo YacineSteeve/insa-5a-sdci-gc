@@ -43,8 +43,8 @@ public class Monitor {
         while (Main.run.get())
             try {
                 Thread.sleep(period * 5);
-                List<Knowledge.Symptom> symptoms = Knowledge.Symptom.values();
-                double[] prediction = analyse_metrics(rs);
+                List<Knowledge.Symptom> symptoms = Knowledge.getLastValues();
+                double[] prediction = analyse_metrics(symptoms);
                 boolean isOk = true;
                 for (int j = 0; j < Knowledge.horizon; j++) {
                     if (prediction[j] > Knowledge.gw_lat_threshold) {

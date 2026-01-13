@@ -80,10 +80,10 @@ public class Knowledge {
 
     public void start() {
         logger.info("Knowledge Starting");
-        create_tables();
+        createTables();
     }
 
-    public void add_value(Metric metric, Target target, double value) {
+    public void addValue(Metric metric, Target target, double value) {
         try (Connection connection = getDatabaseConnection()) {
             String insertQuery = "INSERT INTO " + metric.tableName + " (id, target, value) VALUES (?, ?, ?)";
 
@@ -101,7 +101,7 @@ public class Knowledge {
         }
     }
 
-    public List<Double> get_last_values(Metric metric, Target target) {
+    public List<Double> getLastValues(Metric metric, Target target) {
         try (Connection connection = getDatabaseConnection()) {
             String query = "SELECT value FROM " + metric.tableName + " WHERE target = ? ORDER BY id DESC LIMIT ?";
 
@@ -128,7 +128,7 @@ public class Knowledge {
         }
     }
 
-    private void create_tables() {
+    private void createTables() {
         try (Connection connection = getDatabaseConnection()) {
             connection.setAutoCommit(false);
 
