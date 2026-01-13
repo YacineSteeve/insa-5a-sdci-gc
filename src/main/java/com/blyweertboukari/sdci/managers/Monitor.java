@@ -20,8 +20,7 @@ public class Monitor {
     private static Monitor instance;
     private static final Logger logger = LogManager.getLogger(Monitor.class);
     private static final int period = 2000;
-    private static List<String> symptom;
-    public static Map<Knowledge.Target, Knowledge.Symptom> currenSymptom = Map.ofEntries(
+    public Map<Knowledge.Target, Knowledge.Symptom> currenSymptom = Map.ofEntries(
             Map.entry(Knowledge.Target.GATEWAY, Knowledge.Symptom.GATEWAY_NA),
             Map.entry(Knowledge.Target.SERVER, Knowledge.Symptom.SERVER_NA)
     );
@@ -35,17 +34,16 @@ public class Monitor {
 
     public void start() {
         logger.info("Start monitoring");
-        gatewaySymptom = Knowledge.Symptom.;
-        data_collector();
-        symptom_generator();
+        dataCollector();
+        symptomGenerator();
     }
 
     //Symptom Generator (can be modified)
-    private void symptom_generator() {
+    private void symptomGenerator() {
         while (Main.run.get())
             try {
                 Thread.sleep(period * 5);
-                ResultSet rs = Knowledge.getInstance().select_from_tab();
+                List<Knowledge.Symptom> symptoms = Knowledge.Symptom.values();
                 double[] prediction = analyse_metrics(rs);
                 boolean isOk = true;
                 for (int j = 0; j < Knowledge.horizon; j++) {
@@ -71,7 +69,7 @@ public class Monitor {
     }
 
     //Data Collector
-    private void data_collector() {
+    private void dataCollector() {
         new Thread(() -> {
             logger.info("Reading metrics...");
             while (Main.run.get()) {
