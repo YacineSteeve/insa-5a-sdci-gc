@@ -1,4 +1,4 @@
-package com.blyweertboukari.sdci.utils;
+package com.blyweertboukari.sdci.enums;
 
 public enum Metric {
     LATENCY_MS("LAT"),

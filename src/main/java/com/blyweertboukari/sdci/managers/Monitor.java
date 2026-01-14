@@ -1,8 +1,9 @@
 package com.blyweertboukari.sdci.managers;
 
 import com.blyweertboukari.sdci.Main;
-import com.blyweertboukari.sdci.utils.Metric;
+import com.blyweertboukari.sdci.enums.Metric;
 import com.blyweertboukari.sdci.utils.MetricsReader;
+import com.blyweertboukari.sdci.enums.Target;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,24 +12,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Monitor {
-    private static Monitor instance;
+    private static final Monitor instance = new Monitor();
     private static final Logger logger = LogManager.getLogger(Monitor.class);
     private static final int period = 2000;
-    public Map<Knowledge.Target, Knowledge.Symptom> currenSymptom = Map.ofEntries(
-            Map.entry(Knowledge.Target.GATEWAY, Knowledge.Symptom.GATEWAY_NA),
-            Map.entry(Knowledge.Target.SERVER, Knowledge.Symptom.SERVER_NA)
-    );
+    public final Map<Target, Knowledge.Symptom> currenSymptom = new ConcurrentHashMap<>();
+
+    private Monitor() {
+        currenSymptom.put(Target.GATEWAY, Knowledge.Symptom.GATEWAY_NA);
+        currenSymptom.put(Target.SERVER, Knowledge.Symptom.SERVER_NA);
+    }
 
     public static Monitor getInstance() {
-        if (instance == null) {
-            instance = new Monitor();
-        }
         return instance;
     }
 
@@ -85,7 +84,7 @@ public class Monitor {
     }
 
     private double get_data() throws IOException, InterruptedException {
-        String metric = MetricsReader.getMetric(Metric.REQUESTS_PER_SECOND);
+        String metric = MetricsReader.getInstance().getMetric(Metric.REQUESTS_PER_SECOND);
         return Double.parseDouble(metric);
     }
 

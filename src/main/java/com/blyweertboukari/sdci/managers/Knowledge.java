@@ -1,6 +1,7 @@
 package com.blyweertboukari.sdci.managers;
 
-import com.blyweertboukari.sdci.utils.Metric;
+import com.blyweertboukari.sdci.enums.Metric;
+import com.blyweertboukari.sdci.enums.Target;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -8,7 +9,7 @@ import java.sql.*;
 import java.util.List;
 
 public class Knowledge {
-    private static Knowledge instance;
+    private static final Knowledge instance = new Knowledge();
     private static final Logger logger = LogManager.getLogger(Knowledge.class);
     private static final String DB_DRIVER = "org.h2.Driver";
     private static final String DB_PATH = System.getProperty("db.path", "./src/main/resources/knowledge");
@@ -32,26 +33,26 @@ public class Knowledge {
 
     public enum Rfc {
         GATEWAY_DO_NOTHING,
-        GATEWAY_DECREASE_LATENCY,
+        GATEWAY_DECREASE_LAT,
         GATEWAY_DECREASE_RPS,
 
         SERVER_DO_NOTHING,
-        SERVER_DECREASE_LATENCY,
+        SERVER_DECREASE_LAT,
         SERVER_DECREASE_RPS
     }
 
     public enum Plan {
         GATEWAY_NO_ACTION,
-        GATEWAY_SCALE_UP_RAM,
         GATEWAY_SCALE_UP_CPU,
-        GATEWAY_SCALE_DOWN_RAM,
+        GATEWAY_SCALE_UP_RAM,
         GATEWAY_SCALE_DOWN_CPU,
+        GATEWAY_SCALE_DOWN_RAM,
 
         SERVER_NO_ACTION,
-        SERVER_SCALE_UP_RAM,
-        SERVER_SCALE_DOWN_RAM,
         SERVER_SCALE_UP_CPU,
-        SERVER_SCALE_DOWN_CPU
+        SERVER_SCALE_UP_RAM,
+        SERVER_SCALE_DOWN_CPU,
+        SERVER_SCALE_DOWN_RAM
     }
 
     public enum Workflow {
@@ -66,15 +67,7 @@ public class Knowledge {
         SERVER_DECREASE_CPU
     }
 
-    public enum Target {
-        GATEWAY,
-        SERVER
-    }
-
     public static Knowledge getInstance() {
-        if (instance == null) {
-            instance = new Knowledge();
-        }
         return instance;
     }
 
@@ -135,7 +128,7 @@ public class Knowledge {
             for (Metric metric : Metric.values()) {
                 Statement create;
                 create = connection.createStatement();
-                create.execute("CREATE TABLE IF NOT EXISTS " + metric.tableName + " (id TIMESTAMP PRIMARY KEY, target VARCHAR(50), value DOUBLE )");
+                create.execute("CREATE TABLE IF NOT EXISTS " + metric.tableName + " (id TIMESTAMP PRIMARY KEY, target VARCHAR(50), value DOUBLE)");
                 create.close();
 
                 PreparedStatement update = connection.prepareStatement("TRUNCATE TABLE " + metric.tableName);

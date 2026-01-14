@@ -15,12 +15,10 @@ public class Main {
 
     public static AtomicBoolean run = new AtomicBoolean(true);
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         logger.info("Starting...");
 
         Knowledge.getInstance().start();
-
-        Thread.sleep(3000);
 
         Thread thread_m = new Thread(() -> {
             try {

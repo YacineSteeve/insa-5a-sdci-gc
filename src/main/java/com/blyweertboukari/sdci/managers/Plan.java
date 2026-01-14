@@ -1,79 +1,98 @@
 package com.blyweertboukari.sdci.managers;
 
 import com.blyweertboukari.sdci.Main;
+import com.blyweertboukari.sdci.enums.Target;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"SynchronizeOnNonFinalField"})
 public class Plan {
-    private static Plan instance;
+    private static final Plan instance = new Plan();
     private static final Logger logger = LogManager.getLogger(Plan.class);
-    private static int i;
-    public String gw_PLAN = "";
+    public final Map<Target, Knowledge.Plan> currentPlan = new ConcurrentHashMap<>();
+
+    private Plan() {
+        currentPlan.put(Target.GATEWAY, Knowledge.Plan.GATEWAY_NO_ACTION);
+        currentPlan.put(Target.SERVER, Knowledge.Plan.SERVER_NO_ACTION);
+    }
 
     public static Plan getInstance() {
-        if (instance == null) {
-            instance = new Plan();
-        }
         return instance;
     }
 
     public void start() {
-        logger.info("Start Planning");
+        logger.info("Start Plan");
 
         while (Main.run.get()) {
-            String current_rfc = get_rfc();
-            update_plan(plan_generator(current_rfc));
-
+            Map<Target, Knowledge.Rfc> rfc = getRfc();
+            Map<Target, Knowledge.Plan> nextPlan = generatePlan(rfc);
+            updateCurrentPlan(nextPlan);
         }
     }
 
-    //RFC Receiver
-    private String get_rfc() {
-        synchronized (Analyze.getInstance().gw_current_RFC) {
+    private Map<Target, Knowledge.Rfc> getRfc() {
+        synchronized (Analyze.getInstance().currentRfc) {
             try {
-                Analyze.getInstance().gw_current_RFC.wait();
+                Analyze.getInstance().currentRfc.wait();
             } catch (InterruptedException e) {
-                logger.error("Error in getting RFC: ", e);
+                logger.error("Error while getting RFC: ", e);
             }
         }
-        return Analyze.getInstance().gw_current_RFC;
+        return Analyze.getInstance().currentRfc;
     }
 
-    //Rule-based Plan Generator
-    private String plan_generator(String rfc) {
-        List<String> rfcs = Knowledge.getInstance().get_rfc();
-        List<String> plans = Knowledge.getInstance().get_plans();
+    private Map<Target, Knowledge.Plan> generatePlan(Map<Target, Knowledge.Rfc> rfc) {
+        Map<Target, Knowledge.Plan> plan = new HashMap<>();
 
-        if ("YourPlansDoNotWork".contentEquals(rfc)) {
-            Main.run.set(false);
-            logger.info("All the Plans were executed without success. The loop will stop!");
-            // Terminate JVM
-            System.exit(0);
-        } else if (rfc.contentEquals(rfcs.get(0))) {
-            logger.info("Plan --> To Execute : {}", plans.get(0));
-            i = 0;
-            return plans.get(0);
-        } else if (rfc.contentEquals(rfcs.get(1))) {
-            if (i == 0) {
-                logger.info("Plan --> To Execute : {}", plans.get(1));
-                i++;
-                return plans.get(1);
-            } else if (i == 1) {
-                logger.info("Plan --> To Execute : {}", plans.get(2));
-                i++;
-                return plans.get(2);
+        for (Map.Entry<Target, Knowledge.Rfc> rfcEntry : rfc.entrySet()) {
+            Target target = rfcEntry.getKey();
+            Knowledge.Rfc rfcValue = rfcEntry.getValue();
+
+            Knowledge.Plan planValue = switch (target) {
+                case GATEWAY -> switch (rfcValue) {
+                    case GATEWAY_DO_NOTHING -> switch (currentPlan.get(Target.GATEWAY)) {
+                        // The previous scaling down did not negatively affect, so we try reducing again
+                        case GATEWAY_SCALE_DOWN_CPU -> Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU;
+                        case GATEWAY_SCALE_DOWN_RAM -> Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM;
+                        // In other cases, we do nothing
+                        default -> Knowledge.Plan.GATEWAY_NO_ACTION;
+                    };
+                    case GATEWAY_DECREASE_LAT -> Knowledge.Plan.GATEWAY_SCALE_UP_RAM;
+                    case GATEWAY_DECREASE_RPS -> Knowledge.Plan.GATEWAY_SCALE_UP_CPU;
+                    default -> null;
+                };
+                case SERVER -> switch (rfcValue) {
+                    case SERVER_DO_NOTHING -> switch (currentPlan.get(Target.SERVER)) {
+                        // The previous scaling down did not negatively affect, so we try reducing again
+                        case SERVER_SCALE_DOWN_CPU -> Knowledge.Plan.SERVER_SCALE_DOWN_CPU;
+                        case SERVER_SCALE_DOWN_RAM -> Knowledge.Plan.SERVER_SCALE_DOWN_RAM;
+                        // In other cases, we do nothing
+                        default -> Knowledge.Plan.SERVER_NO_ACTION;
+                    };
+                    case SERVER_DECREASE_LAT -> Knowledge.Plan.SERVER_SCALE_UP_RAM;
+                    case SERVER_DECREASE_RPS -> Knowledge.Plan.SERVER_SCALE_UP_CPU;
+                    default -> null;
+                };
+            };
+
+            if (planValue == null) {
+                logger.warn("Plan for RFC {} not handled for target {}", rfcValue, target);
+            } else {
+                plan.put(target, planValue);
+                logger.info("Planned {} for target {} based on RFC {}", planValue, target, rfcValue);
             }
         }
-        return null;
+
+        return plan;
     }
 
-    private void update_plan(String plan) {
-        synchronized (gw_PLAN) {
-            gw_PLAN.notify();
-            gw_PLAN = plan;
+    private void updateCurrentPlan(Map<Target, Knowledge.Plan> plan) {
+        synchronized (currentPlan) {
+            this.currentPlan.putAll(plan);
+            currentPlan.notifyAll();
         }
     }
 }
