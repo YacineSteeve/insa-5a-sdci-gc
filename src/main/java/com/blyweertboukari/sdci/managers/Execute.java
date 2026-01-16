@@ -13,9 +13,6 @@ import java.util.Map;
 public class Execute {
     private static final Execute instance = new Execute();
     private static final Logger logger = LogManager.getLogger(Execute.class);
-    private static final double CPU_STEP = .25;
-    private static final double RAM_STEP = 5;
-    /* TODO: Find best step values */
 
     public static Execute getInstance() {
         return instance;
@@ -58,11 +55,13 @@ public class Execute {
                         case LATENCY_MS -> switch (planValue) {
                             case GATEWAY_SCALE_UP_RAM -> Knowledge.Workflow.GATEWAY_INCREASE_RAM;
                             case GATEWAY_SCALE_DOWN_RAM -> Knowledge.Workflow.GATEWAY_DECREASE_RAM;
+                            case GATEWAY_NO_ACTION -> Knowledge.Workflow.GATEWAY_NO_ACTION;
                             default -> null;
                         };
                         case REQUESTS_PER_SECOND -> switch (planValue) {
                             case GATEWAY_SCALE_UP_CPU -> Knowledge.Workflow.GATEWAY_INCREASE_CPU;
                             case GATEWAY_SCALE_DOWN_CPU -> Knowledge.Workflow.GATEWAY_DECREASE_CPU;
+                            case GATEWAY_NO_ACTION -> Knowledge.Workflow.GATEWAY_NO_ACTION;
                             default -> null;
                         };
                     };
@@ -70,11 +69,13 @@ public class Execute {
                         case LATENCY_MS -> switch (planValue) {
                             case SERVER_SCALE_UP_RAM -> Knowledge.Workflow.SERVER_INCREASE_RAM;
                             case SERVER_SCALE_DOWN_RAM -> Knowledge.Workflow.SERVER_DECREASE_RAM;
+                            case SERVER_NO_ACTION -> Knowledge.Workflow.SERVER_NO_ACTION;
                             default -> null;
                         };
                         case REQUESTS_PER_SECOND -> switch (planValue) {
                             case SERVER_SCALE_UP_CPU -> Knowledge.Workflow.SERVER_INCREASE_CPU;
                             case SERVER_SCALE_DOWN_CPU -> Knowledge.Workflow.SERVER_DECREASE_CPU;
+                            case SERVER_NO_ACTION -> Knowledge.Workflow.SERVER_NO_ACTION;
                             default -> null;
                         };
                     };
@@ -83,7 +84,7 @@ public class Execute {
                 if (workflowValue == null) {
                     logger.warn("Workflow for plan {} not handled for target {} and metric {}", planValue, target, metric);
                 } else {
-                    workflow.get(target).put(metric, workflowValue);
+                    workflow.computeIfAbsent(target, k -> new HashMap<>()).put(metric, workflowValue);
                     logger.info("Generated workflow {} for target {} and metric {} based on plan {}", workflowValue, target, metric, planValue);
                 }
             }
@@ -98,7 +99,7 @@ public class Execute {
             Map<Metric, Knowledge.Workflow> workflowsForTarget = workflow.get(target);
             logger.info("Executing workflows {} for target {}", workflowsForTarget.values(), target);
 
-            Map<KubernetesClient.Resource, Double> resourcesUpdateDeltas = new HashMap<>();
+            Map<KubernetesClient.Resource, Integer> resourcesUpdateDeltas = new HashMap<>();
 
             for (Map.Entry<Metric, Knowledge.Workflow> workflowValueEntry : workflowsForTarget.entrySet()) {
                 Metric metric = workflowValueEntry.getKey();
@@ -109,17 +110,24 @@ public class Execute {
                     case REQUESTS_PER_SECOND -> KubernetesClient.Resource.RAM;
                 };
 
-                double valueDelta = switch (workflowValue) {
-                    case GATEWAY_INCREASE_CPU, SERVER_INCREASE_CPU -> CPU_STEP;
-                    case GATEWAY_DECREASE_CPU, SERVER_DECREASE_CPU -> -CPU_STEP;
-                    case GATEWAY_INCREASE_RAM, SERVER_INCREASE_RAM -> RAM_STEP;
-                    case GATEWAY_DECREASE_RAM, SERVER_DECREASE_RAM -> -RAM_STEP;
+                int valueDelta = switch (workflowValue) {
+                    case GATEWAY_INCREASE_CPU, SERVER_INCREASE_CPU -> Knowledge.CPU_CHANGE_STEP_M;
+                    case GATEWAY_DECREASE_CPU, SERVER_DECREASE_CPU -> -Knowledge.CPU_CHANGE_STEP_M;
+                    case GATEWAY_INCREASE_RAM, SERVER_INCREASE_RAM -> Knowledge.RAM_CHANGE_STEP_MI;
+                    case GATEWAY_DECREASE_RAM, SERVER_DECREASE_RAM -> -Knowledge.RAM_CHANGE_STEP_MI;
+                    default -> 0;
                 };
 
-                resourcesUpdateDeltas.put(resource, valueDelta);
+                if (valueDelta != 0) {
+                    resourcesUpdateDeltas.put(resource, valueDelta);
+                }
             }
 
-            KubernetesClient.getInstance().updateResourceLimits(target, resourcesUpdateDeltas);
+            if (resourcesUpdateDeltas.isEmpty()) {
+                logger.info("No resource updates needed for target {}", target);
+            } else {
+                KubernetesClient.getInstance().updateResourceLimits(target, resourcesUpdateDeltas);
+            }
         }
     }
 }

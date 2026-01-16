@@ -58,38 +58,55 @@ public class Plan {
             Target target = rfcEntry.getKey();
             Map<Metric, Knowledge.Rfc> rfcsForTarget = rfcEntry.getValue();
 
-            Knowledge.Plan planValue = switch (target) {
-                case GATEWAY -> switch (rfcValue) {
-                    case GATEWAY_DO_NOTHING -> switch (currentPlan.get(Target.GATEWAY)) {
-                        // The previous scaling down did not negatively affect, so we try reducing again
-                        case GATEWAY_SCALE_DOWN_CPU -> Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU;
-                        case GATEWAY_SCALE_DOWN_RAM -> Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM;
-                        // In other cases, we do nothing
-                        default -> Knowledge.Plan.GATEWAY_NO_ACTION;
-                    };
-                    case GATEWAY_DECREASE_LAT -> Knowledge.Plan.GATEWAY_SCALE_UP_RAM;
-                    case GATEWAY_DECREASE_RPS -> Knowledge.Plan.GATEWAY_SCALE_UP_CPU;
-                    default -> null;
-                };
-                case SERVER -> switch (rfcValue) {
-                    case SERVER_DO_NOTHING -> switch (currentPlan.get(Target.SERVER)) {
-                        // The previous scaling down did not negatively affect, so we try reducing again
-                        case SERVER_SCALE_DOWN_CPU -> Knowledge.Plan.SERVER_SCALE_DOWN_CPU;
-                        case SERVER_SCALE_DOWN_RAM -> Knowledge.Plan.SERVER_SCALE_DOWN_RAM;
-                        // In other cases, we do nothing
-                        default -> Knowledge.Plan.SERVER_NO_ACTION;
-                    };
-                    case SERVER_DECREASE_LAT -> Knowledge.Plan.SERVER_SCALE_UP_RAM;
-                    case SERVER_DECREASE_RPS -> Knowledge.Plan.SERVER_SCALE_UP_CPU;
-                    default -> null;
-                };
-            };
+            for (Map.Entry<Metric, Knowledge.Rfc> rfcValueEntry : rfcsForTarget.entrySet()) {
+                Metric metric = rfcValueEntry.getKey();
+                Knowledge.Rfc rfcValue = rfcValueEntry.getValue();
 
-            if (planValue == null) {
-                logger.warn("Plan for RFC {} not handled for target {}", rfcValue, target);
-            } else {
-                plan.put(target, planValue);
-                logger.info("Planned {} for target {} based on RFC {}", planValue, target, rfcValue);
+                Knowledge.Plan currentPlanValue = currentPlan.get(target).get(metric);
+
+                Knowledge.Plan planValue = switch (target) {
+                    case GATEWAY -> switch (metric) {
+                        case LATENCY_MS -> switch (rfcValue) {
+                            case GATEWAY_DO_NOTHING -> currentPlanValue == Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM
+                                // The previous scaling down did not negatively affect, so we try reducing again
+                                ? Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM
+                                // In other cases, we do nothing
+                                : Knowledge.Plan.GATEWAY_NO_ACTION;
+                            case GATEWAY_DECREASE_LAT -> Knowledge.Plan.GATEWAY_SCALE_UP_RAM;
+                            default -> null;
+                        };
+                        case REQUESTS_PER_SECOND -> switch (rfcValue) {
+                            case GATEWAY_DO_NOTHING -> currentPlanValue == Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU
+                                ? Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU
+                                : Knowledge.Plan.GATEWAY_NO_ACTION;
+                            case GATEWAY_DECREASE_RPS -> Knowledge.Plan.GATEWAY_SCALE_UP_CPU;
+                            default -> null;
+                        };
+                    };
+                    case SERVER -> switch (metric) {
+                        case LATENCY_MS -> switch (rfcValue) {
+                            case SERVER_DO_NOTHING -> currentPlanValue == Knowledge.Plan.SERVER_SCALE_DOWN_RAM
+                                ? Knowledge.Plan.SERVER_SCALE_DOWN_RAM
+                                : Knowledge.Plan.SERVER_NO_ACTION;
+                            case SERVER_DECREASE_LAT -> Knowledge.Plan.SERVER_SCALE_UP_RAM;
+                            default -> null;
+                        };
+                        case REQUESTS_PER_SECOND -> switch (rfcValue) {
+                            case SERVER_DO_NOTHING -> currentPlanValue == Knowledge.Plan.SERVER_SCALE_DOWN_CPU
+                                ? Knowledge.Plan.SERVER_SCALE_DOWN_CPU
+                                : Knowledge.Plan.SERVER_NO_ACTION;
+                            case SERVER_DECREASE_RPS -> Knowledge.Plan.SERVER_SCALE_UP_CPU;
+                            default -> null;
+                        };
+                    };
+                };
+
+                if (planValue == null) {
+                    logger.warn("Plan for RFC {} not handled for target {} and metric {}", rfcValue, target, metric);
+                } else {
+                    plan.computeIfAbsent(target, k -> new HashMap<>()).put(metric, planValue);
+                    logger.info("Planned {} for target {} and metric {} based on RFC {}", planValue, target, metric, rfcValue);
+                }
             }
         }
 

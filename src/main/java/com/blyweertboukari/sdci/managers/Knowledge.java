@@ -17,11 +17,14 @@ public class Knowledge {
     private static final String DB_USER = "";
     private static final String DB_PASSWORD = "";
 
+    static final int MONITORING_INTERVAL_MS = 5000;
     static final int MOVING_WINDOW_SIZE = 20;
     static final double GATEWAY_LATENCY_THRESHOLD = 20;
     static final double GATEWAY_RPS_THRESHOLD = 20;
     static final double SERVER_LATENCY_THRESHOLD = 20;
     static final double SERVER_RPS_THRESHOLD = 20;
+    static final int CPU_CHANGE_STEP_M = 10; // 10m
+    static final int RAM_CHANGE_STEP_MI = 32; // 32Mi
 
     public enum Symptom {
         GATEWAY_NA,
@@ -58,11 +61,13 @@ public class Knowledge {
     }
 
     public enum Workflow {
+        GATEWAY_NO_ACTION,
         GATEWAY_INCREASE_RAM,
         GATEWAY_INCREASE_CPU,
         GATEWAY_DECREASE_RAM,
         GATEWAY_DECREASE_CPU,
 
+        SERVER_NO_ACTION,
         SERVER_INCREASE_RAM,
         SERVER_INCREASE_CPU,
         SERVER_DECREASE_RAM,
@@ -98,7 +103,7 @@ public class Knowledge {
 
     public List<Double> getLastValues(Metric metric, Target target) {
         try (Connection connection = getDatabaseConnection()) {
-            String query = "SELECT value FROM " + metric.tableName + " WHERE target = ? ORDER BY id DESC LIMIT ?";
+            String query = "SELECT metric_value FROM " + metric.tableName + " WHERE target = ? ORDER BY id DESC LIMIT ?";
 
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setString(1, target.name());
@@ -130,7 +135,7 @@ public class Knowledge {
             for (Metric metric : Metric.values()) {
                 Statement create;
                 create = connection.createStatement();
-                create.execute("CREATE TABLE IF NOT EXISTS " + metric.tableName + " (id TIMESTAMP PRIMARY KEY, target VARCHAR(50), value DOUBLE)");
+                create.execute("CREATE TABLE IF NOT EXISTS " + metric.tableName + " (id TIMESTAMP PRIMARY KEY, target VARCHAR(50), metric_value DOUBLE)");
                 create.close();
 
                 PreparedStatement update = connection.prepareStatement("TRUNCATE TABLE " + metric.tableName);

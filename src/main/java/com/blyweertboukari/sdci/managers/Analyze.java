@@ -3,18 +3,16 @@ package com.blyweertboukari.sdci.managers;
 import com.blyweertboukari.sdci.Main;
 import com.blyweertboukari.sdci.enums.Metric;
 import com.blyweertboukari.sdci.enums.Target;
-import jdk.dynalink.StandardNamespace;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Analyze {
     private static final Analyze instance = new Analyze();
     private static final Logger logger = LogManager.getLogger(Analyze.class);
-    private static int i;
     public final Map<Target, Map<Metric, Knowledge.Rfc>> currentRfc = new ConcurrentHashMap<>();
 
     private Analyze() {
@@ -36,15 +34,13 @@ public class Analyze {
         logger.info("Start Analyzing");
 
         while (Main.run.get()) {
-
-            Map<Target, Knowledge.Symptom> currentSymptom = getSymptom();
-
-            update_rfc(rfcGenerator(currentSymptom));
+            Map<Target, Map<Metric, Knowledge.Symptom>> symptom = getSymptom();
+            Map<Target, Map<Metric, Knowledge.Rfc>> nextRfc = generateRfc(symptom);
+            updateCurrentRfc(nextRfc);
         }
     }
 
-    //Symptom Receiver
-    private Map<Target, Knowledge.Symptom> getSymptom() {
+    private Map<Target, Map<Metric, Knowledge.Symptom>> getSymptom() {
         synchronized (Monitor.getInstance().currentSymptom) {
             try {
                 Monitor.getInstance().currentSymptom.wait();
@@ -55,34 +51,43 @@ public class Analyze {
         return Monitor.getInstance().currentSymptom;
     }
 
-    //Rule-based RFC Generator
-    private String rfcGenerator( Map<Target, Knowledge.Symptom> symptom) {
-        if (symptom.contentEquals(symptoms.get(0)) || symptom.contentEquals(symptoms.get(2))) {
-            logger.info("RFC --> To plan : {}", rfcs.get(0));
-            i = 0;
-            return rfcs.get(0);
-        } else if (symptom.contentEquals(symptoms.get(1))) {
-            i++;
-            if (i < 3) {
-                logger.info("RFC --> To plan : {}", rfcs.get(1));
-                return rfcs.get(1);
-            } else {
-                logger.info("RFC --> To plan : YourPlansDoNotWork");
-                return "YourPlansDoNotWork";
+    private Map<Target, Map<Metric, Knowledge.Rfc>> generateRfc(Map<Target, Map<Metric, Knowledge.Symptom>> symptom) {
+        Map<Target, Map<Metric, Knowledge.Rfc>> rfc = new HashMap<>();
+
+        for (Map.Entry<Target, Map<Metric, Knowledge.Symptom>> symptomEntry : symptom.entrySet()) {
+            Target target = symptomEntry.getKey();
+            Map<Metric, Knowledge.Symptom> symptomsForTarget = symptomEntry.getValue();
+
+            for (Map.Entry<Metric, Knowledge.Symptom> symptomValueEntry : symptomsForTarget.entrySet()) {
+                Metric metric = symptomValueEntry.getKey();
+                Knowledge.Symptom symptomValue = symptomValueEntry.getValue();
+
+                Knowledge.Rfc rfcValue = switch (target) {
+                    case GATEWAY -> symptomValue == Knowledge.Symptom.GATEWAY_NOK
+                            ? switch (metric) {
+                                case LATENCY_MS -> Knowledge.Rfc.GATEWAY_DECREASE_LAT;
+                                case REQUESTS_PER_SECOND -> Knowledge.Rfc.GATEWAY_DECREASE_RPS;
+                            }
+                            : Knowledge.Rfc.GATEWAY_DO_NOTHING;
+                    case SERVER -> symptomValue == Knowledge.Symptom.SERVER_NOK
+                            ? switch (metric) {
+                                case LATENCY_MS -> Knowledge.Rfc.SERVER_DECREASE_LAT;
+                                case REQUESTS_PER_SECOND -> Knowledge.Rfc.SERVER_DECREASE_RPS;
+                            }
+                            : Knowledge.Rfc.SERVER_DO_NOTHING;
+                };
+
+                rfc.computeIfAbsent(target, k -> new HashMap<>()).put(metric, rfcValue);
             }
-        } else
-            return null;
+        }
 
-        // FAIRE UNE ANALYSE DE POURQUOI ON A NOK (Différente en fonction de la métrique)  OU ALORS SI ON A OK OU NA NE RIEN FAIRE
-
+        return rfc;
     }
 
-    private void update_rfc(String rfc) {
-
-        synchronized (gw_current_RFC) {
-            gw_current_RFC.notify();
-            gw_current_RFC = rfc;
-
+    private void updateCurrentRfc(Map<Target, Map<Metric, Knowledge.Rfc>> nextRfc) {
+        synchronized (currentRfc) {
+            currentRfc.putAll(nextRfc);
+            currentRfc.notifyAll();
         }
     }
 }
