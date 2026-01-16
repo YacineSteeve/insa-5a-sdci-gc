@@ -1,6 +1,7 @@
 package com.blyweertboukari.sdci.managers;
 
 import com.blyweertboukari.sdci.Main;
+import com.blyweertboukari.sdci.enums.Metric;
 import com.blyweertboukari.sdci.enums.Target;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,11 +14,17 @@ public class Analyze {
     private static final Analyze instance = new Analyze();
     private static final Logger logger = LogManager.getLogger(Analyze.class);
     private static int i;
-    public final Map<Target, Knowledge.Rfc> currentRfc = new ConcurrentHashMap<>();
+    public final Map<Target, Map<Metric, Knowledge.Rfc>> currentRfc = new ConcurrentHashMap<>();
 
     private Analyze() {
-        currentRfc.put(Target.GATEWAY, Knowledge.Rfc.GATEWAY_DO_NOTHING);
-        currentRfc.put(Target.SERVER, Knowledge.Rfc.SERVER_DO_NOTHING);
+        currentRfc.put(Target.GATEWAY, Map.of(
+                Metric.LATENCY_MS, Knowledge.Rfc.GATEWAY_DO_NOTHING,
+                Metric.REQUESTS_PER_SECOND, Knowledge.Rfc.GATEWAY_DO_NOTHING
+        ));
+        currentRfc.put(Target.SERVER, Map.of(
+                Metric.LATENCY_MS, Knowledge.Rfc.SERVER_DO_NOTHING,
+                Metric.REQUESTS_PER_SECOND, Knowledge.Rfc.SERVER_DO_NOTHING
+        ));
     }
 
     public static Analyze getInstance() {

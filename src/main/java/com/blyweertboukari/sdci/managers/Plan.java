@@ -1,6 +1,7 @@
 package com.blyweertboukari.sdci.managers;
 
 import com.blyweertboukari.sdci.Main;
+import com.blyweertboukari.sdci.enums.Metric;
 import com.blyweertboukari.sdci.enums.Target;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,11 +13,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Plan {
     private static final Plan instance = new Plan();
     private static final Logger logger = LogManager.getLogger(Plan.class);
-    public final Map<Target, Knowledge.Plan> currentPlan = new ConcurrentHashMap<>();
+    public final Map<Target, Map<Metric, Knowledge.Plan>> currentPlan = new ConcurrentHashMap<>();
 
     private Plan() {
-        currentPlan.put(Target.GATEWAY, Knowledge.Plan.GATEWAY_NO_ACTION);
-        currentPlan.put(Target.SERVER, Knowledge.Plan.SERVER_NO_ACTION);
+        currentPlan.put(Target.GATEWAY, Map.of(
+                Metric.LATENCY_MS, Knowledge.Plan.GATEWAY_NO_ACTION,
+                Metric.REQUESTS_PER_SECOND, Knowledge.Plan.GATEWAY_NO_ACTION
+        ));
+        currentPlan.put(Target.SERVER, Map.of(
+                Metric.LATENCY_MS, Knowledge.Plan.SERVER_NO_ACTION,
+                Metric.REQUESTS_PER_SECOND, Knowledge.Plan.SERVER_NO_ACTION
+        ));
     }
 
     public static Plan getInstance() {
@@ -27,13 +34,13 @@ public class Plan {
         logger.info("Start Plan");
 
         while (Main.run.get()) {
-            Map<Target, Knowledge.Rfc> rfc = getRfc();
-            Map<Target, Knowledge.Plan> nextPlan = generatePlan(rfc);
+            Map<Target, Map<Metric, Knowledge.Rfc>> rfc = getRfc();
+            Map<Target, Map<Metric, Knowledge.Plan>> nextPlan = generatePlan(rfc);
             updateCurrentPlan(nextPlan);
         }
     }
 
-    private Map<Target, Knowledge.Rfc> getRfc() {
+    private Map<Target, Map<Metric, Knowledge.Rfc>> getRfc() {
         synchronized (Analyze.getInstance().currentRfc) {
             try {
                 Analyze.getInstance().currentRfc.wait();
@@ -44,12 +51,12 @@ public class Plan {
         return Analyze.getInstance().currentRfc;
     }
 
-    private Map<Target, Knowledge.Plan> generatePlan(Map<Target, Knowledge.Rfc> rfc) {
-        Map<Target, Knowledge.Plan> plan = new HashMap<>();
+    private Map<Target, Map<Metric, Knowledge.Plan>> generatePlan(Map<Target, Map<Metric, Knowledge.Rfc>> rfc) {
+        Map<Target, Map<Metric, Knowledge.Plan>> plan = new HashMap<>();
 
-        for (Map.Entry<Target, Knowledge.Rfc> rfcEntry : rfc.entrySet()) {
+        for (Map.Entry<Target, Map<Metric, Knowledge.Rfc>> rfcEntry : rfc.entrySet()) {
             Target target = rfcEntry.getKey();
-            Knowledge.Rfc rfcValue = rfcEntry.getValue();
+            Map<Metric, Knowledge.Rfc> rfcsForTarget = rfcEntry.getValue();
 
             Knowledge.Plan planValue = switch (target) {
                 case GATEWAY -> switch (rfcValue) {
@@ -89,7 +96,7 @@ public class Plan {
         return plan;
     }
 
-    private void updateCurrentPlan(Map<Target, Knowledge.Plan> plan) {
+    private void updateCurrentPlan(Map<Target, Map<Metric, Knowledge.Plan>> plan) {
         synchronized (currentPlan) {
             this.currentPlan.putAll(plan);
             currentPlan.notifyAll();

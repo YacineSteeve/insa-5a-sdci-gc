@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 
 public class KubernetesClient {
@@ -50,7 +51,7 @@ public class KubernetesClient {
         return instance;
     }
 
-    public void updateResourceLimits(Target target, Resource resource, double valueDelta) {
+    public void updateResourceLimits(Target target, Map<Resource, Double> resourcesUpdateDeltas) {
         V1Container container;
         int containerIndex;
 
