@@ -3,6 +3,7 @@ package com.blyweertboukari.sdci.managers;
 import com.blyweertboukari.sdci.Main;
 import com.blyweertboukari.sdci.enums.Metric;
 import com.blyweertboukari.sdci.enums.Target;
+import jdk.dynalink.StandardNamespace;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -36,29 +37,26 @@ public class Analyze {
 
         while (Main.run.get()) {
 
-            String current_symptom = get_symptom();
+            Map<Target, Knowledge.Symptom> currentSymptom = getSymptom();
 
-            update_rfc(rfc_generator(current_symptom));
+            update_rfc(rfcGenerator(currentSymptom));
         }
     }
 
     //Symptom Receiver
-    private String get_symptom() {
-        synchronized (Monitor.getInstance().gw_current_SYMP) {
+    private Map<Target, Knowledge.Symptom> getSymptom() {
+        synchronized (Monitor.getInstance().currentSymptom) {
             try {
-                Monitor.getInstance().gw_current_SYMP.wait();
+                Monitor.getInstance().currentSymptom.wait();
             } catch (InterruptedException e) {
                 logger.error("Error in getting Symptom: ", e);
             }
         }
-        return Monitor.getInstance().gw_current_SYMP;
+        return Monitor.getInstance().currentSymptom;
     }
 
     //Rule-based RFC Generator
-    private String rfc_generator(String symptom) {
-        List<String> symptoms = Knowledge.getInstance().get_symptoms();
-        List<String> rfcs = Knowledge.getInstance().get_rfc();
-
+    private String rfcGenerator( Map<Target, Knowledge.Symptom> symptom) {
         if (symptom.contentEquals(symptoms.get(0)) || symptom.contentEquals(symptoms.get(2))) {
             logger.info("RFC --> To plan : {}", rfcs.get(0));
             i = 0;
@@ -74,6 +72,8 @@ public class Analyze {
             }
         } else
             return null;
+
+        // FAIRE UNE ANALYSE DE POURQUOI ON A NOK (Différente en fonction de la métrique)  OU ALORS SI ON A OK OU NA NE RIEN FAIRE
 
     }
 
