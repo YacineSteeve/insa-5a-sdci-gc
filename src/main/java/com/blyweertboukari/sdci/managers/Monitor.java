@@ -8,23 +8,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Monitor {
     private static final Monitor instance = new Monitor();
     private static final Logger logger = LogManager.getLogger(Monitor.class);
-    private static final int period = 2000;
-    public final Map<Target, Knowledge.Symptom> currenSymptom = new ConcurrentHashMap<>();
+    private static final int PERIOD = 2000;
+    public final Map<Target, Knowledge.Symptom> currentSymptom = new ConcurrentHashMap<>();
 
     private Monitor() {
-        currenSymptom.put(Target.GATEWAY, Knowledge.Symptom.GATEWAY_NA);
-        currenSymptom.put(Target.SERVER, Knowledge.Symptom.SERVER_NA);
+        currentSymptom.put(Target.GATEWAY, Knowledge.Symptom.GATEWAY_NA);
+        currentSymptom.put(Target.SERVER, Knowledge.Symptom.SERVER_NA);
     }
 
     public static Monitor getInstance() {
@@ -33,73 +28,61 @@ public class Monitor {
 
     public void start() {
         logger.info("Start monitoring");
-        dataCollector();
         symptomGenerator();
     }
 
-    //Symptom Generator (can be modified)
     private void symptomGenerator() {
         while (Main.run.get())
             try {
-                Thread.sleep(period * 5);
-                List<Knowledge.Symptom> symptoms = Knowledge.getLastValues();
-                double[] prediction = analyse_metrics(symptoms);
-                boolean isOk = true;
-                for (int j = 0; j < Knowledge.horizon; j++) {
-                    if (prediction[j] > Knowledge.gw_lat_threshold) {
-                        logger.info("Symptom --> To Analyse : {}", symptom.get(1));
-                        update_symptom(symptom.get(1));
-                        isOk = false;
-                        break;
-                    } else if (prediction[j] < .0) {
-                        logger.info(" Symptom --> To Analyse : {}", symptom.get(0));
-                        update_symptom(symptom.get(0));
-                        isOk = false;
-                        break;
+                Thread.sleep(PERIOD);
+                for (Target target : Target.values()){
+                    Knowledge.Symptom symptom = switch (target) {
+                        case GATEWAY -> Knowledge.Symptom.GATEWAY_OK;
+                        case SERVER -> Knowledge.Symptom.SERVER_OK;
+                    };
+                    for (Metric metric : Metric.values()){
+                        double value = getData(target, metric);
+                        Knowledge.Symptom metricSymptom = switch (target) {
+                            case GATEWAY -> switch (metric) {
+                                case REQUESTS_PER_SECOND -> value > Knowledge.GATEWAY_RPS_THRESHOLD
+                                        ? Knowledge.Symptom.GATEWAY_NOK
+                                        : Knowledge.Symptom.GATEWAY_OK;
+                                case LATENCY_MS -> value > Knowledge.GATEWAY_LATENCY_THRESHOLD
+                                        ? Knowledge.Symptom.GATEWAY_NOK
+                                        : Knowledge.Symptom.GATEWAY_OK;
+                            };
+                            case SERVER -> switch (metric) {
+                                case REQUESTS_PER_SECOND -> value > Knowledge.SERVER_RPS_THRESHOLD
+                                        ? Knowledge.Symptom.SERVER_NOK
+                                        :  Knowledge.Symptom.SERVER_OK;
+                                case LATENCY_MS ->  value > Knowledge.SERVER_LATENCY_THRESHOLD
+                                        ? Knowledge.Symptom.SERVER_NOK
+                                        : Knowledge.Symptom.SERVER_OK;
+                            };
+                        };
+                        Knowledge.getInstance().addValue(target, metric, value);
+                        if ((metricSymptom == Knowledge.Symptom.GATEWAY_NOK
+                                || metricSymptom == Knowledge.Symptom.SERVER_NOK)
+                                && metricSymptom != symptom) {
+                            symptom = metricSymptom;
+                        }
                     }
+                    updateSymptom(target, symptom);
                 }
-                if (isOk) {
-                    logger.info("Symptom --> To Analyse : {}", symptom.get(2));
-                    update_symptom(symptom.get(2));
-                }
-            } catch (SQLException | InterruptedException e) {
+            } catch (IOException | InterruptedException e) {
                 logger.error("Symptom generator error: ", e);
             }
     }
 
-    //Data Collector
-    private void dataCollector() {
-        new Thread(() -> {
-            logger.info("Reading metrics...");
-            while (Main.run.get()) {
-                try {
-                    Knowledge.getInstance().insert_in_tab(new Timestamp(new Date().getTime()), get_data());
-                } catch (InterruptedException | IOException e) {
-                    logger.error("Data collector error: ", e);
-                }
-            }
-        }
-
-        ).start();
+    private double getData(Target target, Metric metric) throws IOException, InterruptedException {
+        String readValue = MetricsReader.getInstance().getMetric(target, metric);
+        return Double.parseDouble(readValue);
     }
 
-    private double get_data() throws IOException, InterruptedException {
-        String metric = MetricsReader.getInstance().getMetric(Metric.REQUESTS_PER_SECOND);
-        return Double.parseDouble(metric);
-    }
-
-    //TODO : implementer fonction anaylse thresholds...
-    private double[] analyse_metrics(ResultSet rs) throws SQLException {
-        rs.first();
-        return new double[Knowledge.horizon];
-    }
-
-    private void update_symptom(String symptom) {
-
-        synchronized (gw_current_SYMP) {
-            gw_current_SYMP.notify();
-            gw_current_SYMP = symptom;
-
+    private void updateSymptom(Target target, Knowledge.Symptom symptom) {
+        synchronized (currentSymptom) {
+            this.currentSymptom.put(target, symptom);
+            currentSymptom.notifyAll();
         }
     }
 }
