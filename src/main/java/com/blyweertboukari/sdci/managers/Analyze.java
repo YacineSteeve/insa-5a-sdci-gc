@@ -62,6 +62,8 @@ public class Analyze {
                 Metric metric = symptomValueEntry.getKey();
                 Knowledge.Symptom symptomValue = symptomValueEntry.getValue();
 
+                // TODO: Si tendance décroissante, ne rien faire
+
                 Knowledge.Rfc rfcValue = switch (target) {
                     case GATEWAY -> symptomValue == Knowledge.Symptom.GATEWAY_NOK
                             ? switch (metric) {

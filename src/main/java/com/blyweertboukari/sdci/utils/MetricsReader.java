@@ -14,11 +14,15 @@ import java.nio.charset.StandardCharsets;
 
 public class MetricsReader {
     private static final MetricsReader instance = new MetricsReader();
-    private static final String PROMETHEUS_URL = "http://localhost:9090/api/v1/query";
     private static final HttpClient client = HttpClient.newHttpClient();
+    private static String prometheusUrl;
 
     public static MetricsReader getInstance() {
         return instance;
+    }
+
+    public static void setPrometheusUrl(String url) {
+        prometheusUrl = url;
     }
 
     public String getMetric(Target target, Metric metric) throws IOException, InterruptedException {
@@ -33,7 +37,7 @@ public class MetricsReader {
     private String queryPrometheus(String query) throws IOException, InterruptedException {
         HttpResponse<String> response;
 
-        String requestUrl = PROMETHEUS_URL + "?query=" + java.net.URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String requestUrl = prometheusUrl + "/api/v1/query?query=" + java.net.URLEncoder.encode(query, StandardCharsets.UTF_8);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(requestUrl))
