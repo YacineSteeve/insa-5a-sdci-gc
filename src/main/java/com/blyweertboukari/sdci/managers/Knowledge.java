@@ -18,8 +18,10 @@ public class Knowledge {
     private static final String DB_PASSWORD = "";
 
     static final int MOVING_WINDOW_SIZE = 20;
-    static final int horizon = 3;
-    static final double gw_lat_threshold = 20;
+    static final double GATEWAY_LATENCY_THRESHOLD = 20;
+    static final double GATEWAY_RPS_THRESHOLD = 20;
+    static final double SERVER_LATENCY_THRESHOLD = 20;
+    static final double SERVER_RPS_THRESHOLD = 20;
 
     public enum Symptom {
         GATEWAY_NA,
@@ -76,7 +78,7 @@ public class Knowledge {
         createTables();
     }
 
-    public void addValue(Metric metric, Target target, double value) {
+    public void addValue(Target target, Metric metric, double value) {
         try (Connection connection = getDatabaseConnection()) {
             String insertQuery = "INSERT INTO " + metric.tableName + " (id, target, value) VALUES (?, ?, ?)";
 
