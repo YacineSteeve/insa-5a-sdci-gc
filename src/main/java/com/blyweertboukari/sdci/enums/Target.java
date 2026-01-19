@@ -1,13 +1,15 @@
 package com.blyweertboukari.sdci.enums;
 
 public enum Target {
-    GATEWAY("sdci-gateway-i", "sdci-gateway-i-container"),
-    SERVER("sdci-server", "sdci-server-container");
+    GATEWAY("default", "sdci-gateway-i", "sdci-gateway-i-container"),
+    SERVER("default", "sdci-server", "sdci-server-container");
 
+    public final String namespace;
     public final String deploymentName;
     public final String containerName;
 
-    Target(String deploymentName, String containerName) {
+    Target(String namespace, String deploymentName, String containerName) {
+        this.namespace = namespace;
         this.deploymentName = deploymentName;
         this.containerName = containerName;
     }

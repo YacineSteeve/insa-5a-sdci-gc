@@ -27,8 +27,16 @@ public class MetricsReader {
 
     public String getMetric(Target target, Metric metric) throws IOException, InterruptedException {
         String query = switch (metric) {
-            case LATENCY_MS -> "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))";
-            case REQUESTS_PER_SECOND -> "round(sum (rate(istio_requests_total{reporter=~\"source|waypoint\"}[5m])), 0.01)";
+            case LATENCY_MS -> String.format(
+                    "label_join(histogram_quantile(0.99, sum by (le,destination_workload,destination_workload_namespace) (rate(istio_request_duration_milliseconds_bucket{reporter=~\"source\",destination_workload_namespace=\"%s\",destination_workload=\"%s\"}[25s]))), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+                    target.namespace,
+                    target.deploymentName
+            );
+            case REQUESTS_PER_SECOND -> String.format(
+                    "round(sum(irate(istio_requests_total{reporter=~\"source\",destination_workload_namespace=~\"%s\",destination_workload=~\"%s\"}[25s])), 0.001)",
+                    target.namespace,
+                    target.deploymentName
+            );
         };
 
         return queryPrometheus(query);

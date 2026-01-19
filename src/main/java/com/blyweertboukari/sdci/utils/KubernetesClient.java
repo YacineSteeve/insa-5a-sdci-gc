@@ -21,7 +21,6 @@ public class KubernetesClient {
     private static final KubernetesClient instance = new KubernetesClient();
     private static final Logger logger = LogManager.getLogger(KubernetesClient.class);
     private static final AppsV1Api api;
-    private static final String NAMESPACE = "default";
 
     static {
         try {
@@ -58,7 +57,7 @@ public class KubernetesClient {
         int containerIndex;
 
         try {
-            V1Deployment deployment = api.readNamespacedDeployment(target.deploymentName, NAMESPACE).execute();
+            V1Deployment deployment = api.readNamespacedDeployment(target.deploymentName, target.namespace).execute();
 
             if (deployment.getSpec() == null || deployment.getSpec().getTemplate().getSpec() == null ||
                 deployment.getSpec().getTemplate().getSpec().getContainers().isEmpty()
@@ -120,7 +119,7 @@ public class KubernetesClient {
                     V1Deployment.class,
                     () -> api.patchNamespacedDeployment(
                             target.deploymentName,
-                            NAMESPACE,
+                            target.namespace,
                             new V1Patch(
                                     String.format("[%s]", String.join(",", jsonPatchStrings))
                             )
