@@ -101,7 +101,7 @@ public class Knowledge {
         }
     }
 
-    public List<Double> getLastValues(Metric metric, Target target) {
+    public List<Double> getLastValues(Target target, Metric metric) {
         try (Connection connection = getDatabaseConnection()) {
             String query = "SELECT metric_value FROM " + metric.tableName + " WHERE target = ? ORDER BY id DESC LIMIT ?";
 
@@ -113,7 +113,7 @@ public class Knowledge {
 
             List<Double> values = new java.util.ArrayList<>();
             while (resultSet.next()) {
-                values.add(resultSet.getDouble("value"));
+                values.add(resultSet.getDouble("metric_value"));
             }
             resultSet.close();
             preparedStatement.close();

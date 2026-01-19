@@ -31,13 +31,15 @@ public class KubernetesClient {
     }
 
     public enum Resource {
-        CPU("cpu"),
-        RAM("memory");
+        CPU("cpu", 50),
+        RAM("memory", 128);
 
         public final String label;
+        public final int minValue;
 
-        Resource(String label) {
+        Resource(String label, int minValue) {
             this.label = label;
+            this.minValue = minValue;
         }
 
         public String formatValue(int value) {
@@ -103,6 +105,11 @@ public class KubernetesClient {
             } else {
                 int currentValue = container.getResources().getLimits().get(resource.label).getNumber().intValue();
                 newValue = currentValue + valueDelta;
+            }
+
+            if (newValue < resource.minValue) {
+                logger.warn("New value {} for resource {} is below minimum {}. Setting to minimum.", newValue, resource.label, resource.minValue);
+                newValue = resource.minValue;
             }
 
             jsonPatchStrings.add(

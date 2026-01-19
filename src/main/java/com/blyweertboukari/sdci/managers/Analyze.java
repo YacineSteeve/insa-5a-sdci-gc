@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,6 +15,14 @@ public class Analyze {
     private static final Analyze instance = new Analyze();
     private static final Logger logger = LogManager.getLogger(Analyze.class);
     public final Map<Target, Map<Metric, Knowledge.Rfc>> currentRfc = new ConcurrentHashMap<>();
+    private static final Double FLAT_TREND_THRESHOLD = 0.005;
+    private static enum Trend {
+        ASCENDING,
+        DESCENDING,
+        FLAT,
+        VERTICAL,
+        UNKNOWN
+    }
 
     private Analyze() {
         currentRfc.put(Target.GATEWAY, Map.of(
@@ -62,16 +71,16 @@ public class Analyze {
                 Metric metric = symptomValueEntry.getKey();
                 Knowledge.Symptom symptomValue = symptomValueEntry.getValue();
 
-                // TODO: Si tendance décroissante, ne rien faire
+                Trend trend = getTrend(Knowledge.getInstance().getLastValues(target, metric));
 
                 Knowledge.Rfc rfcValue = switch (target) {
-                    case GATEWAY -> symptomValue == Knowledge.Symptom.GATEWAY_NOK
+                    case GATEWAY -> trend != Trend.DESCENDING && symptomValue == Knowledge.Symptom.GATEWAY_NOK
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.GATEWAY_DECREASE_LAT;
                                 case REQUESTS_PER_SECOND -> Knowledge.Rfc.GATEWAY_DECREASE_RPS;
                             }
                             : Knowledge.Rfc.GATEWAY_DO_NOTHING;
-                    case SERVER -> symptomValue == Knowledge.Symptom.SERVER_NOK
+                    case SERVER -> trend != Trend.DESCENDING && symptomValue == Knowledge.Symptom.SERVER_NOK
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.SERVER_DECREASE_LAT;
                                 case REQUESTS_PER_SECOND -> Knowledge.Rfc.SERVER_DECREASE_RPS;
@@ -84,6 +93,38 @@ public class Analyze {
         }
 
         return rfc;
+    }
+
+    private static Trend getTrend(List<Double> data) {
+        if (data == null || data.size() < 2) return Trend.UNKNOWN;
+
+        double sumX = 0;
+        double sumY = 0;
+        double sumXY = 0;
+        double sumX2 = 0;
+        int n = data.size();
+
+        for (int x = 0; x < n; x++) {
+            double y = data.get(x); // The value is the Y-axis
+
+            sumX += x;
+            sumY += y;
+            sumXY += x * y;
+            sumX2 += x * x;
+        }
+
+        // Formula for Slope (m)
+        double numerator = (n * sumXY) - (sumX * sumY);
+        double denominator = (n * sumX2) - (sumX * sumX);
+
+        if (denominator == 0) return Trend.VERTICAL; // Should not happen with indices as X
+
+        double slope = numerator / denominator;
+
+        if (slope > FLAT_TREND_THRESHOLD) return Trend.ASCENDING;
+        if (slope < -FLAT_TREND_THRESHOLD) return Trend.DESCENDING;
+
+        return Trend.FLAT;
     }
 
     private void updateCurrentRfc(Map<Target, Map<Metric, Knowledge.Rfc>> nextRfc) {
