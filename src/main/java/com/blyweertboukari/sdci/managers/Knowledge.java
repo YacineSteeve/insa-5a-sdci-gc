@@ -85,7 +85,7 @@ public class Knowledge {
 
     public void addValue(Target target, Metric metric, double value) {
         try (Connection connection = getDatabaseConnection()) {
-            String insertQuery = "INSERT INTO " + metric.tableName + " (id, target, value) VALUES (?, ?, ?)";
+            String insertQuery = "INSERT INTO " + metric.tableName + " (id, target, metric_value) VALUES (?, ?, ?)";
 
             PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
             preparedStatement.setTimestamp(1, new Timestamp(System.currentTimeMillis()));

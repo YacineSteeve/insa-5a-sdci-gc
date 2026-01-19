@@ -79,6 +79,12 @@ public class Monitor {
                                 && metricSymptom != targetSymptom) {
                             targetSymptom = metricSymptom;
                         }
+                    } catch (NumberFormatException e) {
+                        logger.warn("Received non-numeric data for {} on {}: {}", metric, target, e.getMessage());
+                        targetSymptom = switch (target) {
+                            case GATEWAY -> Knowledge.Symptom.GATEWAY_NA;
+                            case SERVER -> Knowledge.Symptom.SERVER_NA;
+                        };
                     } catch (IOException | InterruptedException e) {
                         logger.error("Error while getting {} for {}: ", metric, target, e);
                         targetSymptom = switch (target) {
@@ -93,7 +99,7 @@ public class Monitor {
         }
     }
 
-    private Double getData(Target target, Metric metric) throws IOException, InterruptedException {
+    private Double getData(Target target, Metric metric) throws IOException, InterruptedException, NumberFormatException {
         String readValue = MetricsReader.getInstance().getMetric(target, metric);
         return Double.parseDouble(readValue);
     }
