@@ -1,0 +1,13 @@
+services:
+  general-controller:
+    image: general-controller:latest
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: general-controller
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - "http://host.docker.internal:9090"
