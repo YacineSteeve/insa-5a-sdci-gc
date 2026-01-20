@@ -24,7 +24,7 @@ public class KubernetesClient {
 
     static {
         try {
-            api = new AppsV1Api(ClientBuilder.standard().build());
+            api = new AppsV1Api(ClientBuilder.cluster().build());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
