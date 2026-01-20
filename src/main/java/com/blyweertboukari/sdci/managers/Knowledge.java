@@ -19,9 +19,9 @@ public class Knowledge {
 
     static final int MONITORING_INTERVAL_MS = 5000;
     static final int MOVING_WINDOW_SIZE = 20;
-    static final double GATEWAY_LATENCY_THRESHOLD = 500;
+    static final double GATEWAY_LATENCY_THRESHOLD = 350;
     static final double GATEWAY_RPS_THRESHOLD = 4.5;
-    static final double SERVER_LATENCY_THRESHOLD = 250;
+    static final double SERVER_LATENCY_THRESHOLD = 200;
     static final double SERVER_RPS_THRESHOLD = 4.5;
     static final int CPU_CHANGE_STEP_M = 10; // 10m
     static final int RAM_CHANGE_STEP_MI = 32; // 32Mi

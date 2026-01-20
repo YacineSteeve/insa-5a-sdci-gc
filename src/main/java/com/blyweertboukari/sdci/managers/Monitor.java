@@ -47,6 +47,17 @@ public class Monitor {
 
             Map<Target, Map<Metric, Knowledge.Symptom>> symptom = new HashMap<>();
 
+            Map<Metric, Knowledge.Symptom> gatewayMap = new HashMap<>();
+            gatewayMap.put(Metric.LATENCY_MS, Knowledge.Symptom.GATEWAY_NA);
+            gatewayMap.put(Metric.REQUESTS_PER_SECOND, Knowledge.Symptom.GATEWAY_NA);
+
+            Map<Metric, Knowledge.Symptom> serverMap = new HashMap<>();
+            serverMap.put(Metric.LATENCY_MS, Knowledge.Symptom.SERVER_NA);
+            serverMap.put(Metric.REQUESTS_PER_SECOND, Knowledge.Symptom.SERVER_NA);
+
+            symptom.put(Target.GATEWAY, gatewayMap);
+            symptom.put(Target.SERVER, serverMap);
+
             for (Target target : Target.values()) {
                 Knowledge.Symptom targetSymptom = switch (target) {
                     case GATEWAY -> Knowledge.Symptom.GATEWAY_OK;
@@ -92,9 +103,11 @@ public class Monitor {
                             case SERVER -> Knowledge.Symptom.SERVER_NA;
                         };
                     }
+
+                    logger.info("Computed symptom {} on metric {} for target {}", targetSymptom, metric, target);
+                    symptom.get(target).put(metric, targetSymptom);
                 }
             }
-
             updateSymptom(symptom);
         }
     }

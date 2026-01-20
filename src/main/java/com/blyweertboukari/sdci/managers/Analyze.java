@@ -88,6 +88,7 @@ public class Analyze {
                             : Knowledge.Rfc.SERVER_DO_NOTHING;
                 };
 
+                logger.info("Defined RFC {} for metric {} on target {}", rfcValue, metric, target);
                 rfc.computeIfAbsent(target, k -> new HashMap<>()).put(metric, rfcValue);
             }
         }
