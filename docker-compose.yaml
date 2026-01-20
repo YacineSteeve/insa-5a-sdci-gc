@@ -7,8 +7,10 @@ services:
       dockerfile: ./Dockerfile
     container_name: general-controller
     restart: always
-    #extra_hosts:
-    #  - "host.docker.internal:host-gateway"
+    volumes:
+      - ~/.kube/config:/root/.kube/config:ro
+    environment:
+      - KUBECONFIG=/root/.kube/config
+    network_mode: host
     command:
-    #  - "http://host.docker.internal:9090"
       - "http://prometheus.local"
