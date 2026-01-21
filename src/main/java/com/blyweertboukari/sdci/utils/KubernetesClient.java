@@ -13,6 +13,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -102,7 +104,16 @@ public class KubernetesClient {
                     continue;
                 }
             } else {
-                int currentValue = container.getResources().getLimits().get(resource.label).getNumber().intValue();
+                BigDecimal rawValue = container.getResources().getLimits().get(resource.label).getNumber();
+
+                int currentValue;
+
+                if (resource == Resource.RAM) {
+                    currentValue = rawValue.divide(BigDecimal.valueOf(1048576), RoundingMode.HALF_UP).intValue();
+                } else {
+                    currentValue = rawValue.multiply(BigDecimal.valueOf(1000)).intValue();
+                }
+
                 newValue = currentValue + valueDelta;
             }
 
