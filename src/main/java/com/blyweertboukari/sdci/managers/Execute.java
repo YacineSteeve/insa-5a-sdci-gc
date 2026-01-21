@@ -123,11 +123,7 @@ public class Execute {
                 }
             }
 
-            for (KubernetesClient.Resource resource : resourcesUpdateDeltas.keySet()) {
-                if (resourcesUpdateDeltas.get(resource) == 0) {
-                    resourcesUpdateDeltas.remove(resource);
-                }
-            }
+            resourcesUpdateDeltas.entrySet().removeIf(entry -> entry.getValue() == 0);
 
             if (resourcesUpdateDeltas.isEmpty()) {
                 logger.info("No resource updates needed for target {}", target);
