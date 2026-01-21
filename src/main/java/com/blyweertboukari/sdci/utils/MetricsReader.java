@@ -32,11 +32,6 @@ public class MetricsReader {
                     target.namespace,
                     target.deploymentName
             );
-            case REQUESTS_PER_SECOND -> String.format(
-                    "round(sum by (le, destination_workload, destination_workload_namespace, pod) (irate(istio_requests_total{reporter=~\"destination\",destination_workload_namespace=~\"%s\",destination_workload=~\"%s\"}[30s])), 0.001)",
-                    target.namespace,
-                    target.deploymentName
-            );
         };
 
         return queryPrometheus(query);

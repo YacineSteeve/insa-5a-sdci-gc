@@ -26,12 +26,10 @@ public class Analyze {
 
     private Analyze() {
         currentRfc.put(Target.GATEWAY, Map.of(
-                Metric.LATENCY_MS, Knowledge.Rfc.GATEWAY_DO_NOTHING,
-                Metric.REQUESTS_PER_SECOND, Knowledge.Rfc.GATEWAY_DO_NOTHING
+                Metric.LATENCY_MS, Knowledge.Rfc.GATEWAY_DO_NOTHING
         ));
         currentRfc.put(Target.SERVER, Map.of(
-                Metric.LATENCY_MS, Knowledge.Rfc.SERVER_DO_NOTHING,
-                Metric.REQUESTS_PER_SECOND, Knowledge.Rfc.SERVER_DO_NOTHING
+                Metric.LATENCY_MS, Knowledge.Rfc.SERVER_DO_NOTHING
         ));
     }
 
@@ -77,23 +75,19 @@ public class Analyze {
                     case GATEWAY -> trend != Trend.DESCENDING && symptomValue == Knowledge.Symptom.GATEWAY_NOK
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.GATEWAY_DECREASE_LAT;
-                                case REQUESTS_PER_SECOND -> Knowledge.Rfc.GATEWAY_DECREASE_RPS;
                             }
                             : trend == Trend.DESCENDING
                                 ? switch (metric) {
                                     case LATENCY_MS -> Knowledge.Rfc.GATEWAY_KEEP_LAT;
-                                    case REQUESTS_PER_SECOND -> Knowledge.Rfc.GATEWAY_KEEP_RPS;
                                 }
                                 : Knowledge.Rfc.GATEWAY_DO_NOTHING;
                     case SERVER -> trend != Trend.DESCENDING && symptomValue == Knowledge.Symptom.SERVER_NOK
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.SERVER_DECREASE_LAT;
-                                case REQUESTS_PER_SECOND -> Knowledge.Rfc.SERVER_DECREASE_RPS;
                             }
                             : trend == Trend.DESCENDING
                                 ? switch (metric) {
                                     case LATENCY_MS -> Knowledge.Rfc.SERVER_KEEP_LAT;
-                                    case REQUESTS_PER_SECOND -> Knowledge.Rfc.SERVER_KEEP_RPS;
                                 }
                                 : Knowledge.Rfc.SERVER_DO_NOTHING;
                 };

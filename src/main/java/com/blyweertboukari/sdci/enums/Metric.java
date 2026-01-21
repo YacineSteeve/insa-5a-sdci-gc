@@ -1,8 +1,7 @@
 package com.blyweertboukari.sdci.enums;
 
 public enum Metric {
-    LATENCY_MS("LAT"),
-    REQUESTS_PER_SECOND("RPS");
+    LATENCY_MS("LAT");
 
     public final String tableName;
 

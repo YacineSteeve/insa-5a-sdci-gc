@@ -17,12 +17,10 @@ public class Plan {
 
     private Plan() {
         currentPlan.put(Target.GATEWAY, Map.of(
-                Metric.LATENCY_MS, Knowledge.Plan.GATEWAY_NO_ACTION,
-                Metric.REQUESTS_PER_SECOND, Knowledge.Plan.GATEWAY_NO_ACTION
+                Metric.LATENCY_MS, Knowledge.Plan.GATEWAY_NO_ACTION
         ));
         currentPlan.put(Target.SERVER, Map.of(
-                Metric.LATENCY_MS, Knowledge.Plan.SERVER_NO_ACTION,
-                Metric.REQUESTS_PER_SECOND, Knowledge.Plan.SERVER_NO_ACTION
+                Metric.LATENCY_MS, Knowledge.Plan.SERVER_NO_ACTION
         ));
     }
 
@@ -67,39 +65,23 @@ public class Plan {
                 Knowledge.Plan planValue = switch (target) {
                     case GATEWAY -> switch (metric) {
                         case LATENCY_MS -> switch (rfcValue) {
-                            case GATEWAY_DO_NOTHING -> currentPlanValue == Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM
+                            case GATEWAY_DO_NOTHING -> currentPlanValue == Knowledge.Plan.GATEWAY_SCALE_DOWN
                                 // The previous scaling down did not negatively affect, so we try reducing again
-                                ? Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM
+                                ? Knowledge.Plan.GATEWAY_SCALE_DOWN
                                 // In other cases, we do nothing
                                 : Knowledge.Plan.GATEWAY_NO_ACTION;
-                            case GATEWAY_DECREASE_LAT -> Knowledge.Plan.GATEWAY_SCALE_UP_RAM;
-                            case GATEWAY_KEEP_LAT -> Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM;
-                            default -> null;
-                        };
-                        case REQUESTS_PER_SECOND -> switch (rfcValue) {
-                            case GATEWAY_DO_NOTHING -> currentPlanValue == Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU
-                                ? Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU
-                                : Knowledge.Plan.GATEWAY_NO_ACTION;
-                            case GATEWAY_DECREASE_RPS -> Knowledge.Plan.GATEWAY_SCALE_UP_CPU;
-                            case GATEWAY_KEEP_RPS -> Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU;
+                            case GATEWAY_DECREASE_LAT -> Knowledge.Plan.GATEWAY_SCALE_UP;
+                            case GATEWAY_KEEP_LAT -> Knowledge.Plan.GATEWAY_SCALE_DOWN;
                             default -> null;
                         };
                     };
                     case SERVER -> switch (metric) {
                         case LATENCY_MS -> switch (rfcValue) {
-                            case SERVER_DO_NOTHING -> currentPlanValue == Knowledge.Plan.SERVER_SCALE_DOWN_RAM
-                                ? Knowledge.Plan.SERVER_SCALE_DOWN_RAM
+                            case SERVER_DO_NOTHING -> currentPlanValue == Knowledge.Plan.SERVER_SCALE_DOWN
+                                ? Knowledge.Plan.SERVER_SCALE_DOWN
                                 : Knowledge.Plan.SERVER_NO_ACTION;
-                            case SERVER_DECREASE_LAT -> Knowledge.Plan.SERVER_SCALE_UP_RAM;
-                            case SERVER_KEEP_LAT -> Knowledge.Plan.SERVER_SCALE_DOWN_RAM;
-                            default -> null;
-                        };
-                        case REQUESTS_PER_SECOND -> switch (rfcValue) {
-                            case SERVER_DO_NOTHING -> currentPlanValue == Knowledge.Plan.SERVER_SCALE_DOWN_CPU
-                                ? Knowledge.Plan.SERVER_SCALE_DOWN_CPU
-                                : Knowledge.Plan.SERVER_NO_ACTION;
-                            case SERVER_DECREASE_RPS -> Knowledge.Plan.SERVER_SCALE_UP_CPU;
-                            case SERVER_KEEP_RPS -> Knowledge.Plan.SERVER_SCALE_DOWN_CPU;
+                            case SERVER_DECREASE_LAT -> Knowledge.Plan.SERVER_SCALE_UP;
+                            case SERVER_KEEP_LAT -> Knowledge.Plan.SERVER_SCALE_DOWN;
                             default -> null;
                         };
                     };

@@ -20,9 +20,7 @@ public class Knowledge {
     static final int MONITORING_INTERVAL_MS = 5000;
     static final int MOVING_WINDOW_SIZE = 20;
     static final double GATEWAY_LATENCY_THRESHOLD = 350;
-    static final double GATEWAY_RPS_THRESHOLD = 4.5;
     static final double SERVER_LATENCY_THRESHOLD = 200;
-    static final double SERVER_RPS_THRESHOLD = 4.5;
     static final int CPU_CHANGE_STEP_M = 10; // 10m
     static final int RAM_CHANGE_STEP_MI = 32; // 32Mi
 
@@ -40,42 +38,30 @@ public class Knowledge {
         GATEWAY_DO_NOTHING,
         GATEWAY_DECREASE_LAT,
         GATEWAY_KEEP_LAT,
-        GATEWAY_DECREASE_RPS,
-        GATEWAY_KEEP_RPS,
 
         SERVER_DO_NOTHING,
         SERVER_DECREASE_LAT,
         SERVER_KEEP_LAT,
-        SERVER_DECREASE_RPS,
-        SERVER_KEEP_RPS
     }
 
     public enum Plan {
         GATEWAY_NO_ACTION,
-        GATEWAY_SCALE_UP_CPU,
-        GATEWAY_SCALE_UP_RAM,
-        GATEWAY_SCALE_DOWN_CPU,
-        GATEWAY_SCALE_DOWN_RAM,
+        GATEWAY_SCALE_UP,
+        GATEWAY_SCALE_DOWN,
 
         SERVER_NO_ACTION,
-        SERVER_SCALE_UP_CPU,
-        SERVER_SCALE_UP_RAM,
-        SERVER_SCALE_DOWN_CPU,
-        SERVER_SCALE_DOWN_RAM
+        SERVER_SCALE_UP,
+        SERVER_SCALE_DOWN,
     }
 
     public enum Workflow {
         GATEWAY_NO_ACTION,
-        GATEWAY_INCREASE_RAM,
-        GATEWAY_INCREASE_CPU,
-        GATEWAY_DECREASE_RAM,
-        GATEWAY_DECREASE_CPU,
+        GATEWAY_INCREASE_LIMITS,
+        GATEWAY_DECREASE_LIMITS,
 
         SERVER_NO_ACTION,
-        SERVER_INCREASE_RAM,
-        SERVER_INCREASE_CPU,
-        SERVER_DECREASE_RAM,
-        SERVER_DECREASE_CPU
+        SERVER_INCREASE_LIMITS,
+        SERVER_DECREASE_LIMITS,
     }
 
     public static Knowledge getInstance() {

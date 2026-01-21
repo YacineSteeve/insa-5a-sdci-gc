@@ -19,12 +19,10 @@ public class Monitor {
 
     private Monitor() {
         currentSymptom.put(Target.GATEWAY, Map.of(
-                Metric.LATENCY_MS, Knowledge.Symptom.GATEWAY_NA,
-                Metric.REQUESTS_PER_SECOND, Knowledge.Symptom.GATEWAY_NA
+                Metric.LATENCY_MS, Knowledge.Symptom.GATEWAY_NA
         ));
         currentSymptom.put(Target.SERVER, Map.of(
-                Metric.LATENCY_MS, Knowledge.Symptom.SERVER_NA,
-                Metric.REQUESTS_PER_SECOND, Knowledge.Symptom.SERVER_NA
+                Metric.LATENCY_MS, Knowledge.Symptom.SERVER_NA
         ));
     }
 
@@ -49,11 +47,9 @@ public class Monitor {
 
             Map<Metric, Knowledge.Symptom> gatewayMap = new HashMap<>();
             gatewayMap.put(Metric.LATENCY_MS, Knowledge.Symptom.GATEWAY_NA);
-            gatewayMap.put(Metric.REQUESTS_PER_SECOND, Knowledge.Symptom.GATEWAY_NA);
 
             Map<Metric, Knowledge.Symptom> serverMap = new HashMap<>();
             serverMap.put(Metric.LATENCY_MS, Knowledge.Symptom.SERVER_NA);
-            serverMap.put(Metric.REQUESTS_PER_SECOND, Knowledge.Symptom.SERVER_NA);
 
             symptom.put(Target.GATEWAY, gatewayMap);
             symptom.put(Target.SERVER, serverMap);
@@ -68,17 +64,11 @@ public class Monitor {
                         double value = getData(target, metric);
                         Knowledge.Symptom metricSymptom = switch (target) {
                             case GATEWAY -> switch (metric) {
-                                case REQUESTS_PER_SECOND -> value > Knowledge.GATEWAY_RPS_THRESHOLD
-                                        ? Knowledge.Symptom.GATEWAY_NOK
-                                        : Knowledge.Symptom.GATEWAY_OK;
                                 case LATENCY_MS -> value > Knowledge.GATEWAY_LATENCY_THRESHOLD
                                         ? Knowledge.Symptom.GATEWAY_NOK
                                         : Knowledge.Symptom.GATEWAY_OK;
                             };
                             case SERVER -> switch (metric) {
-                                case REQUESTS_PER_SECOND -> value > Knowledge.SERVER_RPS_THRESHOLD
-                                        ? Knowledge.Symptom.SERVER_NOK
-                                        : Knowledge.Symptom.SERVER_OK;
                                 case LATENCY_MS -> value > Knowledge.SERVER_LATENCY_THRESHOLD
                                         ? Knowledge.Symptom.SERVER_NOK
                                         : Knowledge.Symptom.SERVER_OK;

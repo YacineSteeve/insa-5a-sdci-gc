@@ -53,28 +53,16 @@ public class Execute {
                 Knowledge.Workflow workflowValue = switch (target) {
                     case GATEWAY -> switch (metric) {
                         case LATENCY_MS -> switch (planValue) {
-                            case GATEWAY_SCALE_UP_RAM -> Knowledge.Workflow.GATEWAY_INCREASE_RAM;
-                            case GATEWAY_SCALE_DOWN_RAM -> Knowledge.Workflow.GATEWAY_DECREASE_RAM;
-                            case GATEWAY_NO_ACTION -> Knowledge.Workflow.GATEWAY_NO_ACTION;
-                            default -> null;
-                        };
-                        case REQUESTS_PER_SECOND -> switch (planValue) {
-                            case GATEWAY_SCALE_UP_CPU -> Knowledge.Workflow.GATEWAY_INCREASE_CPU;
-                            case GATEWAY_SCALE_DOWN_CPU -> Knowledge.Workflow.GATEWAY_DECREASE_CPU;
+                            case GATEWAY_SCALE_UP -> Knowledge.Workflow.GATEWAY_INCREASE_LIMITS;
+                            case GATEWAY_SCALE_DOWN -> Knowledge.Workflow.GATEWAY_DECREASE_LIMITS;
                             case GATEWAY_NO_ACTION -> Knowledge.Workflow.GATEWAY_NO_ACTION;
                             default -> null;
                         };
                     };
                     case SERVER -> switch (metric) {
                         case LATENCY_MS -> switch (planValue) {
-                            case SERVER_SCALE_UP_RAM -> Knowledge.Workflow.SERVER_INCREASE_RAM;
-                            case SERVER_SCALE_DOWN_RAM -> Knowledge.Workflow.SERVER_DECREASE_RAM;
-                            case SERVER_NO_ACTION -> Knowledge.Workflow.SERVER_NO_ACTION;
-                            default -> null;
-                        };
-                        case REQUESTS_PER_SECOND -> switch (planValue) {
-                            case SERVER_SCALE_UP_CPU -> Knowledge.Workflow.SERVER_INCREASE_CPU;
-                            case SERVER_SCALE_DOWN_CPU -> Knowledge.Workflow.SERVER_DECREASE_CPU;
+                            case SERVER_SCALE_UP -> Knowledge.Workflow.SERVER_INCREASE_LIMITS;
+                            case SERVER_SCALE_DOWN -> Knowledge.Workflow.SERVER_DECREASE_LIMITS;
                             case SERVER_NO_ACTION -> Knowledge.Workflow.SERVER_NO_ACTION;
                             default -> null;
                         };
@@ -100,6 +88,8 @@ public class Execute {
             logger.info("Executing workflows {} for target {}", workflowsForTarget.values(), target);
 
             Map<KubernetesClient.Resource, Integer> resourcesUpdateDeltas = new HashMap<>();
+            resourcesUpdateDeltas.put(KubernetesClient.Resource.CPU, 0);
+            resourcesUpdateDeltas.put(KubernetesClient.Resource.RAM, 0);
 
             for (Map.Entry<Metric, Knowledge.Workflow> workflowValueEntry : workflowsForTarget.entrySet()) {
                 Metric metric = workflowValueEntry.getKey();
@@ -107,19 +97,35 @@ public class Execute {
 
                 KubernetesClient.Resource resource = switch (metric) {
                     case LATENCY_MS -> KubernetesClient.Resource.CPU;
-                    case REQUESTS_PER_SECOND -> KubernetesClient.Resource.RAM;
                 };
 
-                int valueDelta = switch (workflowValue) {
-                    case GATEWAY_INCREASE_CPU, SERVER_INCREASE_CPU -> Knowledge.CPU_CHANGE_STEP_M;
-                    case GATEWAY_DECREASE_CPU, SERVER_DECREASE_CPU -> -Knowledge.CPU_CHANGE_STEP_M;
-                    case GATEWAY_INCREASE_RAM, SERVER_INCREASE_RAM -> Knowledge.RAM_CHANGE_STEP_MI;
-                    case GATEWAY_DECREASE_RAM, SERVER_DECREASE_RAM -> -Knowledge.RAM_CHANGE_STEP_MI;
-                    default -> 0;
-                };
+                switch (workflowValue) {
+                    case GATEWAY_INCREASE_LIMITS, SERVER_INCREASE_LIMITS -> {
+                        resourcesUpdateDeltas.put(
+                                resource,
+                                resourcesUpdateDeltas.get(KubernetesClient.Resource.CPU) + Knowledge.CPU_CHANGE_STEP_M
+                        );
+                        resourcesUpdateDeltas.put(
+                                KubernetesClient.Resource.RAM,
+                                resourcesUpdateDeltas.get(KubernetesClient.Resource.RAM) + Knowledge.RAM_CHANGE_STEP_MI
+                        );
+                    }
+                    case GATEWAY_DECREASE_LIMITS, SERVER_DECREASE_LIMITS -> {
+                        resourcesUpdateDeltas.put(
+                                resource,
+                                resourcesUpdateDeltas.get(KubernetesClient.Resource.CPU) - Knowledge.CPU_CHANGE_STEP_M
+                        );
+                        resourcesUpdateDeltas.put(
+                                KubernetesClient.Resource.RAM,
+                                resourcesUpdateDeltas.get(KubernetesClient.Resource.RAM) - Knowledge.RAM_CHANGE_STEP_MI
+                        );
+                    }
+                }
+            }
 
-                if (valueDelta != 0) {
-                    resourcesUpdateDeltas.put(resource, valueDelta);
+            for (KubernetesClient.Resource resource : resourcesUpdateDeltas.keySet()) {
+                if (resourcesUpdateDeltas.get(resource) == 0) {
+                    resourcesUpdateDeltas.remove(resource);
                 }
             }
 
