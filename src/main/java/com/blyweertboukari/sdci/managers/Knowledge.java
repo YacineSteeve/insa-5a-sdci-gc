@@ -39,11 +39,15 @@ public class Knowledge {
     public enum Rfc {
         GATEWAY_DO_NOTHING,
         GATEWAY_DECREASE_LAT,
+        GATEWAY_KEEP_LAT,
         GATEWAY_DECREASE_RPS,
+        GATEWAY_KEEP_RPS,
 
         SERVER_DO_NOTHING,
         SERVER_DECREASE_LAT,
-        SERVER_DECREASE_RPS
+        SERVER_KEEP_LAT,
+        SERVER_DECREASE_RPS,
+        SERVER_KEEP_RPS
     }
 
     public enum Plan {

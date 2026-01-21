@@ -73,6 +73,7 @@ public class Plan {
                                 // In other cases, we do nothing
                                 : Knowledge.Plan.GATEWAY_NO_ACTION;
                             case GATEWAY_DECREASE_LAT -> Knowledge.Plan.GATEWAY_SCALE_UP_RAM;
+                            case GATEWAY_KEEP_LAT -> Knowledge.Plan.GATEWAY_SCALE_DOWN_RAM;
                             default -> null;
                         };
                         case REQUESTS_PER_SECOND -> switch (rfcValue) {
@@ -80,6 +81,7 @@ public class Plan {
                                 ? Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU
                                 : Knowledge.Plan.GATEWAY_NO_ACTION;
                             case GATEWAY_DECREASE_RPS -> Knowledge.Plan.GATEWAY_SCALE_UP_CPU;
+                            case GATEWAY_KEEP_RPS -> Knowledge.Plan.GATEWAY_SCALE_DOWN_CPU;
                             default -> null;
                         };
                     };
@@ -89,6 +91,7 @@ public class Plan {
                                 ? Knowledge.Plan.SERVER_SCALE_DOWN_RAM
                                 : Knowledge.Plan.SERVER_NO_ACTION;
                             case SERVER_DECREASE_LAT -> Knowledge.Plan.SERVER_SCALE_UP_RAM;
+                            case SERVER_KEEP_LAT -> Knowledge.Plan.SERVER_SCALE_DOWN_RAM;
                             default -> null;
                         };
                         case REQUESTS_PER_SECOND -> switch (rfcValue) {
@@ -96,6 +99,7 @@ public class Plan {
                                 ? Knowledge.Plan.SERVER_SCALE_DOWN_CPU
                                 : Knowledge.Plan.SERVER_NO_ACTION;
                             case SERVER_DECREASE_RPS -> Knowledge.Plan.SERVER_SCALE_UP_CPU;
+                            case SERVER_KEEP_RPS -> Knowledge.Plan.SERVER_SCALE_DOWN_CPU;
                             default -> null;
                         };
                     };

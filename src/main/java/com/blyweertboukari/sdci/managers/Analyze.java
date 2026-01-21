@@ -79,13 +79,23 @@ public class Analyze {
                                 case LATENCY_MS -> Knowledge.Rfc.GATEWAY_DECREASE_LAT;
                                 case REQUESTS_PER_SECOND -> Knowledge.Rfc.GATEWAY_DECREASE_RPS;
                             }
-                            : Knowledge.Rfc.GATEWAY_DO_NOTHING;
+                            : trend == Trend.DESCENDING
+                                ? switch (metric) {
+                                    case LATENCY_MS -> Knowledge.Rfc.GATEWAY_KEEP_LAT;
+                                    case REQUESTS_PER_SECOND -> Knowledge.Rfc.GATEWAY_KEEP_RPS;
+                                }
+                                : Knowledge.Rfc.GATEWAY_DO_NOTHING;
                     case SERVER -> trend != Trend.DESCENDING && symptomValue == Knowledge.Symptom.SERVER_NOK
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.SERVER_DECREASE_LAT;
                                 case REQUESTS_PER_SECOND -> Knowledge.Rfc.SERVER_DECREASE_RPS;
                             }
-                            : Knowledge.Rfc.SERVER_DO_NOTHING;
+                            : trend == Trend.DESCENDING
+                                ? switch (metric) {
+                                    case LATENCY_MS -> Knowledge.Rfc.SERVER_KEEP_LAT;
+                                    case REQUESTS_PER_SECOND -> Knowledge.Rfc.SERVER_KEEP_RPS;
+                                }
+                                : Knowledge.Rfc.SERVER_DO_NOTHING;
                 };
 
                 logger.info("Defined RFC {} for metric {} on target {}", rfcValue, metric, target);
