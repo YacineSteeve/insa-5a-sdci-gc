@@ -100,7 +100,7 @@ public class KubernetesClient {
                     newValue = valueDelta;
                     logger.warn("Container {} in deployment {} has no resource limits set. Setting initial limit.", target.containerName, target.deploymentName);
                 } else {
-                    logger.error("Cannot decrease resource limits for container {} in deployment {} with no existing limits", target.containerName, target.deploymentName);
+                    logger.warn("Cannot decrease resource limits for container {} in deployment {} with no existing limits", target.containerName, target.deploymentName);
                     continue;
                 }
             } else {
