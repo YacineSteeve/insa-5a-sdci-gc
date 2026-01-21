@@ -16,7 +16,7 @@ public class Analyze {
     private static final Logger logger = LogManager.getLogger(Analyze.class);
     public final Map<Target, Map<Metric, Knowledge.Rfc>> currentRfc = new ConcurrentHashMap<>();
     private static final Double FLAT_TREND_THRESHOLD = 0.005;
-    private static enum Trend {
+    private enum Trend {
         ASCENDING,
         DESCENDING,
         FLAT,

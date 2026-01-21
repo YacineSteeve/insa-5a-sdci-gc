@@ -3,6 +3,7 @@ package com.blyweertboukari.sdci.utils;
 import com.blyweertboukari.sdci.enums.Target;
 import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.JSON;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Deployment;
@@ -12,8 +13,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -56,7 +57,6 @@ public class KubernetesClient {
 
     public void updateResourceLimits(Target target, Map<Resource, Integer> resourcesUpdateDeltas) {
         V1Container container;
-        int containerIndex;
 
         try {
             V1Deployment deployment = api.readNamespacedDeployment(target.deploymentName, target.namespace).execute();
@@ -78,13 +78,12 @@ public class KubernetesClient {
             }
 
             container = containerOpt.get();
-            containerIndex = deployment.getSpec().getTemplate().getSpec().getContainers().indexOf(container);
         } catch (ApiException e) {
             logger.error("Error reading deployment {}:", target.deploymentName, e);
             return;
         }
 
-        List<String> jsonPatchStrings = new ArrayList<>();
+        Map<String, String> newLimitsMap = new HashMap<>();
 
         for (Map.Entry<Resource, Integer> entry : resourcesUpdateDeltas.entrySet()) {
             Resource resource = entry.getKey();
@@ -100,7 +99,7 @@ public class KubernetesClient {
                     logger.warn("Container {} in deployment {} has no resource limits set. Setting initial limit.", target.containerName, target.deploymentName);
                 } else {
                     logger.error("Cannot decrease resource limits for container {} in deployment {} with no existing limits", target.containerName, target.deploymentName);
-                    return;
+                    continue;
                 }
             } else {
                 int currentValue = container.getResources().getLimits().get(resource.label).getNumber().intValue();
@@ -112,14 +111,31 @@ public class KubernetesClient {
                 newValue = resource.minValue;
             }
 
-            jsonPatchStrings.add(
-                    buildJsonPatchStringForResource(
-                            containerIndex,
-                            resource,
-                            resource.formatValue(newValue)
-                    )
-            );
+            newLimitsMap.put(resource.label, resource.formatValue(newValue));
         }
+
+        if (newLimitsMap.isEmpty()) {
+            logger.warn("No resource limits to update for deployment {}", target.deploymentName);
+            return;
+        }
+
+        Map<String, Object> patchBody =
+                Collections.singletonMap("spec",
+                        Collections.singletonMap("template",
+                                Collections.singletonMap("spec",
+                                        Collections.singletonMap("containers",
+                                                Collections.singletonList(
+                                                        Map.of(
+                                                                "name", target.containerName,
+                                                                "resources", Collections.singletonMap("limits",
+                                                                        newLimitsMap
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                );
 
         try {
             PatchUtils.patch(
@@ -127,24 +143,15 @@ public class KubernetesClient {
                     () -> api.patchNamespacedDeployment(
                             target.deploymentName,
                             target.namespace,
-                            new V1Patch(
-                                    String.format("[%s]", String.join(",", jsonPatchStrings))
-                            )
+                            new V1Patch(JSON.serialize(patchBody))
                     ).buildCall(null),
-                    V1Patch.PATCH_FORMAT_JSON_PATCH,
+                    V1Patch.PATCH_FORMAT_STRATEGIC_MERGE_PATCH,
                     api.getApiClient()
             );
+
+            logger.info("Updated {} for deployment {}", resourcesUpdateDeltas.keySet(), target.deploymentName);
         } catch (ApiException e) {
             logger.error("Error updating deployment {}:", target.deploymentName, e);
         }
-
-        logger.info("Updated {} for deployment {}", resourcesUpdateDeltas.keySet(), target.deploymentName);
-    }
-
-    private String buildJsonPatchStringForResource(int containerIndex, Resource resource, String value) {
-        return String.format(
-                "{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/%d/resources/limits/%s\",\"value\":\"%s\"}",
-                containerIndex, resource.label, value
-        );
     }
 }
