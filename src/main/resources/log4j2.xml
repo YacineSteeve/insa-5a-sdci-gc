@@ -2,7 +2,7 @@
     <Appenders>
         <Console name="ConsoleAppender" target="SYSTEM_OUT">
             <PatternLayout
-                    pattern="%d{ISO8601} [%-18logger{2} in %-8t] %highlight{%-5level}{TRACE=magenta} %-0.-250msg%n"/>
+                    pattern="%d{ISO8601} [%-25logger{2} in %-8t] %highlight{%-5level}{TRACE=magenta} %-0.-250msg%n"/>
         </Console>
     </Appenders>
     <Loggers>
