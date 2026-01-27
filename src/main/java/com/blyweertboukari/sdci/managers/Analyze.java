@@ -76,7 +76,7 @@ public class Analyze {
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.GATEWAY_DECREASE_LAT;
                             }
-                            : trend == Trend.DESCENDING
+                            : trend == Trend.DESCENDING && symptomValue == Knowledge.Symptom.SERVER_OK
                                 ? switch (metric) {
                                     case LATENCY_MS -> Knowledge.Rfc.GATEWAY_KEEP_LAT;
                                 }
@@ -85,14 +85,14 @@ public class Analyze {
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.SERVER_DECREASE_LAT;
                             }
-                            : trend == Trend.DESCENDING
+                            : trend == Trend.DESCENDING && symptomValue == Knowledge.Symptom.SERVER_OK
                                 ? switch (metric) {
                                     case LATENCY_MS -> Knowledge.Rfc.SERVER_KEEP_LAT;
                                 }
                                 : Knowledge.Rfc.SERVER_DO_NOTHING;
                 };
 
-                logger.info("Defined RFC {} for metric {} on target {}", rfcValue, metric, target);
+                logger.info("Defined RFC {} for metric {} on target {} (trend {})", rfcValue, metric, target, trend);
                 rfc.computeIfAbsent(target, k -> new HashMap<>()).put(metric, rfcValue);
             }
         }
