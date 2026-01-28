@@ -17,8 +17,8 @@ public class Knowledge {
     private static final String DB_USER = "";
     private static final String DB_PASSWORD = "";
 
-    static final int MONITORING_INTERVAL_MS = 30000;
-    static final int MOVING_WINDOW_SIZE = 5;
+    static final int MONITORING_INTERVAL_MS = 20000;
+    static final int MOVING_WINDOW_SIZE = 10;
     static final double GATEWAY_LATENCY_THRESHOLD = 350;
     static final double SERVER_LATENCY_THRESHOLD = 250;
     static final int CPU_CHANGE_STEP_M = 10; // 10m

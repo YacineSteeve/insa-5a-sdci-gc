@@ -72,7 +72,7 @@ public class Analyze {
                 Trend trend = getTrend(Knowledge.getInstance().getLastValues(target, metric));
 
                 Knowledge.Rfc rfcValue = switch (target) {
-                    case GATEWAY -> trend != Trend.DESCENDING && symptomValue == Knowledge.Symptom.GATEWAY_NOK
+                    case GATEWAY -> symptomValue == Knowledge.Symptom.GATEWAY_NOK
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.GATEWAY_DECREASE_LAT;
                             }
@@ -81,7 +81,7 @@ public class Analyze {
                                     case LATENCY_MS -> Knowledge.Rfc.GATEWAY_KEEP_LAT;
                                 }
                                 : Knowledge.Rfc.GATEWAY_DO_NOTHING;
-                    case SERVER -> trend != Trend.DESCENDING && symptomValue == Knowledge.Symptom.SERVER_NOK
+                    case SERVER -> symptomValue == Knowledge.Symptom.SERVER_NOK
                             ? switch (metric) {
                                 case LATENCY_MS -> Knowledge.Rfc.SERVER_DECREASE_LAT;
                             }
